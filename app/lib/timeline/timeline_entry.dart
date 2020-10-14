@@ -8,6 +8,7 @@ import 'package:flare_dart/math/vec2d.dart' as flare;
 import 'package:nima/nima.dart' as nima;
 import 'package:nima/nima/animation/actor_animation.dart' as nima;
 import 'package:nima/nima/math/aabb.dart' as nima;
+import 'package:timeline/timeline/timeline.dart';
 
 /// An object representing the renderable assets loaded from `timeline.json`.
 /// 
@@ -94,7 +95,7 @@ class TimelineEntry {
   TimelineEntry next;
   TimelineEntry previous;
 
-  /// All these parameters are used by the [Timeline] object to properly position the current entry.
+  /// [Timeline] 对象使用所有这些参数来正确定位当前条目。
   double start;
   double end;
   double y = 0.0;

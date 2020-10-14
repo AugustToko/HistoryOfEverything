@@ -271,42 +271,40 @@ class _MainMenuWidgetState extends State<MainMenuWidget> {
       onWillPop: _popSearch,
       child: Container(
           color: background,
-          child: Padding(
-            padding: EdgeInsets.only(top: devicePadding.top),
-            child: SingleChildScrollView(
-                padding:
-                    EdgeInsets.only(top: 20.0, left: 20, right: 20, bottom: 20),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                          Collapsible(
-                              isCollapsed: _isSearching,
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Padding(
-                                        padding: const EdgeInsets.only(
-                                            top: 20.0, bottom: 12.0),
-                                        child: Opacity(
-                                            opacity: 0.85,
-                                            child: Image.asset(
-                                                "assets/twoDimensions_logo.png",
-                                                height: 10.0))),
-                                    Text("The History of Everything",
-                                        textAlign: TextAlign.left,
-                                        style: TextStyle(
-                                            color: darkText.withOpacity(
-                                                darkText.opacity * 0.75),
-                                            fontSize: 34.0,
-                                            fontFamily: "RobotoMedium"))
-                                  ])),
-                          Padding(
-                              padding: EdgeInsets.only(top: 22.0),
-                              child: SearchWidget(
-                                  _searchFocusNode, _searchTextController))
-                        ] +
-                        tail)),
-          )),
+          child: SingleChildScrollView(
+              padding:
+                  EdgeInsets.only(top: 20.0, left: 20, right: 20, bottom: 20),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SizedBox(height: devicePadding.top,),
+                        Collapsible(
+                            isCollapsed: _isSearching,
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 20.0, bottom: 12.0),
+                                      child: Opacity(
+                                          opacity: 0.85,
+                                          child: Image.asset(
+                                              "assets/twoDimensions_logo.png",
+                                              height: 10.0))),
+                                  Text("The History of Everything",
+                                      textAlign: TextAlign.left,
+                                      style: TextStyle(
+                                          color: darkText.withOpacity(
+                                              darkText.opacity * 0.75),
+                                          fontSize: 34.0,
+                                          fontFamily: "RobotoMedium"))
+                                ])),
+                        Padding(
+                            padding: EdgeInsets.only(top: 22.0),
+                            child: SearchWidget(
+                                _searchFocusNode, _searchTextController))
+                      ] +
+                      tail))),
     );
   }
 }

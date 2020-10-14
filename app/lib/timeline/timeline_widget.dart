@@ -13,12 +13,11 @@ import 'package:timeline/timeline/timeline_entry.dart';
 import 'package:timeline/timeline/timeline_render_widget.dart';
 import 'package:timeline/timeline/timeline_utils.dart';
 
-typedef ShowMenuCallback();
-typedef SelectItemCallback(TimelineEntry item);
+// typedef ShowMenuCallback();
+// typedef SelectItemCallback(TimelineEntry item);
 
-/// This is the Stateful Widget associated with the Timeline object. 
-/// It is built from a [focusItem], that is the event the [Timeline] should
-/// focus on when it's created.
+///这是与时间轴对象关联的有状态窗口小部件。
+///它是从 [focusItem] 构建的，这是 [Timeline] 创建时应关注的事件。
 class TimelineWidget extends StatefulWidget {
   final MenuItemData focusItem;
   final Timeline timeline;
@@ -32,37 +31,33 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   static const String DefaultEraName = "Birth of the Universe";
   static const double TopOverlap = 56.0;
 
-  /// These variables are used to calculate the correct viewport for the timeline
-  /// when performing a scaling operation as in [_scaleStart], [_scaleUpdate], [_scaleEnd].
+  /// 如 [_scaleStart]，[_ scaleUpdate]，[_ scaleEnd]中所述，在执行缩放操作时，
+  /// 这些变量用于计算时间轴的正确视口。
   Offset _lastFocalPoint;
   double _scaleStartYearStart = -100.0;
   double _scaleStartYearEnd = 100.0;
 
-  /// When touching a bubble on the [Timeline] keep track of which 
-  /// element has been touched in order to move to the [article_widget].
+  /// 当触摸[时间轴]上的气泡时，请跟踪已触摸哪个元素以便移至[article_widget]。
   TapTarget _touchedBubble;
   TimelineEntry _touchedEntry;
 
-  /// Which era the Timeline is currently focused on. 
-  /// Defaults to [DefaultEraName].
+  /// 时间轴目前关注哪个时代。 默认为 [DefaultEraName]。
   String _eraName;
 
-  /// Syntactic-sugar-getter.
+  /// 语法糖获取器
   Timeline get timeline => widget.timeline;
 
   Color _headerTextColor;
   Color _headerBackgroundColor;
 
-  /// This state variable toggles the rendering of the left sidebar
-  /// showing the favorite elements already on the timeline.
+  /// 此状态变量可切换左侧边栏的呈现，以显示时间轴上已有的收藏夹元素。
   bool _showFavorites = false;
 
-  /// The following three functions define are the callbacks used by the 
-  /// [GestureDetector] widget when rendering this widget. 
-  /// First gather the information regarding the starting point of the scaling operation.
-  /// Then perform the update based on the incoming [ScaleUpdateDetails] data,
-  /// and pass the relevant information down to the [Timeline], so that it can display
-  /// all the relevant information properly.
+  /// 以下三个函数定义为
+  /// [GestureDetector]小部件在呈现此小部件时。
+  /// 首先收集有关缩放操作起点的信息。
+  /// 然后根据传入的[ ScaleUpdateDetails] 数据执行更新，并将相关信息传递到 [Timeline]，
+  /// 以便它可以正确显示所有相关信息。
   void _scaleStart(ScaleStartDetails details) {
     _lastFocalPoint = details.focalPoint;
     _scaleStartYearStart = timeline.start;
@@ -92,8 +87,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
         velocity: details.velocity.pixelsPerSecond.dy, animate: true);
   }
 
-  /// The following two callbacks are passed down to the [TimelineRenderWidget] so
-  /// that it can pass the information back to this widget. 
+  ///以下两个回调传递给 [TimelineRenderWidget]，因此可以将信息传递回此小部件。
   onTouchBubble(TapTarget bubble) {
     _touchedBubble = bubble;
   }
@@ -106,13 +100,9 @@ class _TimelineWidgetState extends State<TimelineWidget> {
     timeline.setViewport(velocity: 0.0, animate: true);
   }
 
-  /// If the [TimelineRenderWidget] has set the [_touchedBubble] to the currently
-  /// touched bubble on the timeline, upon removing the finger from the screen,
-  /// the app will check if the touch operation consists of a zooming operation.
-  /// 
-  /// If it is, adjust the layout accordingly.
-  /// Otherwise trigger a [Navigator.push()] for the tapped bubble. This moves
-  /// the app into the [ArticleWidget].
+  /// 如果 [TimelineRenderWidget] 已将 [_touchedBubble] 设置为时间线上当前触摸的气泡，则从屏
+  /// 幕上移开手指后，应用程序将检查触摸操作是否包含缩放操作。 如果是这样，请相应地调整布局。 否则，
+  /// 触发点击的气泡的[Navigator.push]。 这会将应用程序移至 [ArticleWidget]。
   void _tapUp(TapUpDetails details) {
     EdgeInsets devicePadding = MediaQuery.of(context).padding;
     if (_touchedBubble != null) {
@@ -150,10 +140,8 @@ class _TimelineWidgetState extends State<TimelineWidget> {
     }
   }
 
-  /// When performing a long-press operation, the viewport will be adjusted so that 
-  /// the visible start and end times will be updated according to the [TimelineEntry] 
-  /// information. The long-pressed bubble will float to the top of the viewport, 
-  /// and the viewport will be scaled appropriately.
+  /// 当执行长按操作时，将调整视口，以便根据[TimelineEntry]信息更新可见的开始时间和结束时间。
+  /// 长按的气泡将漂浮到视口的顶部，并且视口将适当缩放。
   void _longPress() {
     EdgeInsets devicePadding = MediaQuery.of(context).padding;
     if (_touchedBubble != null) {
@@ -184,7 +172,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
           _headerBackgroundColor = background;
         });
       };
-      /// Update the label for the [Timeline] object.
+      /// 更新[时间轴]对象的标签。
       timeline.onEraChanged = (TimelineEntry entry) {
         setState(() {
           _eraName = entry != null ? entry.label : DefaultEraName;
@@ -197,7 +185,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
     }
   }
 
-  /// Update the current view and change the timeline header, color and background color,
+  /// 更新当前视图并更改时间轴标题，颜色和背景色，
   @override
   void didUpdateWidget(covariant TimelineWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -227,8 +215,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
     }
   }
 
-  /// This is a [StatefulWidget] life-cycle method. It's being overridden here
-  /// so that we can properly update the [Timeline] widget.
+  /// 这是 [StatefulWidget] 生命周期方法。 这里已被覆盖，因此我们可以正确地更新 [Timeline] 小部件。
   @override
   deactivate() {
     super.deactivate();
@@ -238,12 +225,11 @@ class _TimelineWidgetState extends State<TimelineWidget> {
     }
   }
 
-  /// This widget is wrapped in a [Scaffold] to have the classic Material Design visual layout structure.
-  /// Then the body of the app is made of a [GestureDetector] to properly handle all the user-input events.
-  /// This widget then lays down a [Stack]:
-  ///   - [TimelineRenderWidget] renders the actual contents of the timeline such as the currently visible
-  ///   bubbles with their corresponding [FlareWidget]s, the left bar with the ticks, etc.
-  ///   - [BackdropFilter] that wraps the top header bar, with the back button, the favorites button, and its coloring.
+  /// 此小部件包装在[Scaffold]中，具有经典的Material Design视觉布局结构。
+  /// 然后，应用程序的主体由[GestureDetector]组成，可以正确处理所有用户输入的事件。
+  /// 然后，此小部件放置一个[Stack]：
+  /// -[TimelineRenderWidget]渲染时间线的实际内容，例如当前可见的气泡及其对应的[FlareWidget]，左侧的刻度线等。
+  /// -[BackdropFilter]，它包装顶部标题栏，并带有“后退”按钮，“收藏夹”按钮及其颜色。
   @override
   Widget build(BuildContext context) {
     EdgeInsets devicePadding = MediaQuery.of(context).padding;
@@ -251,7 +237,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
       timeline.devicePadding = devicePadding;
     }
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.greenAccent,
       body: GestureDetector(
           onLongPress: _longPress,
           onTapDown: _tapDown,
@@ -294,7 +280,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                               icon: Icon(Icons.arrow_back),
                               onPressed: () {
                                 widget.timeline.isActive = false;
-                                Navigator.of(context).pop();
+                                Navigator.pop(context);
                                 return true;
                               },
                             ),
