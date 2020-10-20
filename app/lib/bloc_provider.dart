@@ -24,16 +24,23 @@ class BlocProvider extends InheritedWidget {
       : timeline = t ?? Timeline(platform),
         favoritesBloc = fb ?? FavoritesBloc(),
         super(key: key, child: child) {
-    timeline
-        .loadFromBundle("assets/timeline.json")
-        .then((List<TimelineEntry> entries) {
-      timeline.setViewport(
-          start: entries.first.start * 2.0,
-          end: entries.first.start,
-          animate: true);
+    timeline.loadFromBundle("assets/timeline.json").then((entries) {
+      // timeline.setViewport(
+      //     start: entries.first.start * 2.0,
+      //     end: entries.first.start,
+      //     animate: true);
 
       /// 将时间轴推进到起始位置.
-      timeline.advance(0.0, false);
+      // timeline.advance(0.0, false);
+
+      // print(
+      //     '------------------------------------------TIME LINE INFO-----------------------------------------------------');
+      // print('timeline.renderStart: ${timeline.renderStart}');
+      // print('timeline.start: ${timeline.start}');
+      // print('timeline.renderEnd: ${timeline.renderEnd}');
+      // print('timeline.end: ${timeline.end}');
+      // print(
+      //     '------------------------------------------TIME LINE INFO-----------------------------------------------------');
 
       /// All the entries are loaded, we can fill in the [favoritesBloc]...
       favoritesBloc.init(entries);
@@ -50,7 +57,7 @@ class BlocProvider extends InheritedWidget {
   /// e.g. [ArticleWidget] retrieves the favorites information using this static getter.
   static FavoritesBloc favorites(BuildContext context) {
     BlocProvider bp =
-        (context.inheritFromWidgetOfExactType(BlocProvider) as BlocProvider);
+        context.dependOnInheritedWidgetOfExactType<BlocProvider>();
     FavoritesBloc bloc = bp?.favoritesBloc;
     return bloc;
   }
@@ -59,7 +66,7 @@ class BlocProvider extends InheritedWidget {
   /// e.g. [_MainMenuWidgetState.navigateToTimeline] uses this static getter to access build the [TimelineWidget].
   static Timeline getTimeline(BuildContext context) {
     BlocProvider bp =
-        (context.inheritFromWidgetOfExactType(BlocProvider) as BlocProvider);
+        context.dependOnInheritedWidgetOfExactType<BlocProvider>();
     Timeline bloc = bp?.timeline;
     return bloc;
   }

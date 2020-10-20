@@ -101,6 +101,8 @@ class Timeline {
   ScrollMetrics _scrollMetrics;
   Simulation _scrollSimulation;
 
+  /// 使得长按的气泡将漂浮到视口的顶部，并设置 padding，让气泡距离顶部有一段距离
+  /// 见 [TimeLime.padding.png]
   EdgeInsets padding = EdgeInsets.zero;
   EdgeInsets devicePadding = EdgeInsets.zero;
 
@@ -291,24 +293,19 @@ class Timeline {
 
       /// 完整性检查。
       if (map != null) {
-
         /// 如果是 “事件"，则创建当前条目并填写当前日期；如果是 "时代"，则查找 "start" 属性。
         /// 一些条目将具有一个 "开始" 元素，但没有指定一个 "结束" 元素。 这些条目指定了一个特定事件，
         /// 例如历史上 "人类" 的出现，但尚未结束。
         TimelineEntry timelineEntry = TimelineEntry();
 
         if (map.containsKey("date")) {
-
           timelineEntry.type = TimelineEntryType.Incident;
           dynamic date = map["date"];
           timelineEntry.start = date is int ? date.toDouble() : date;
-
         } else if (map.containsKey("start")) {
-
           timelineEntry.type = TimelineEntryType.Era;
           dynamic start = map["start"];
           timelineEntry.start = start is int ? start.toDouble() : start;
-
         } else {
           continue;
         }
@@ -636,9 +633,14 @@ class Timeline {
       }
     }
 
-    /// sort the full list so they are in order of oldest to newest
+    /// 对完整列表进行排序，以使它们按照从旧到新的顺序排列
     allEntries.sort((TimelineEntry a, TimelineEntry b) {
       return a.start.compareTo(b.start);
+    });
+
+    /// DEBUG，标记 TimelineEntryType
+    allEntries.forEach((element) {
+      element.label = '${element.type.toString().split('.')[1]}\n${element.label}';
     });
 
     _backgroundColors
@@ -649,36 +651,46 @@ class Timeline {
     _timeMin = double.maxFinite;
     _timeMax = -double.maxFinite;
 
-    /// List for "root" entries, i.e. entries with no parents.
+    /// 列出“根”条目，即没有父母的条目。
     _entries = List<TimelineEntry>();
 
-    /// Build up hierarchy (Eras are grouped into "Spanning Eras" and Events are placed into the Eras they belong to).
-    TimelineEntry previous;
+    /// 建立层次结构（将时代分为“跨越时代”，并将事件放入其所属的时代）。
+    TimelineEntry previous; // 前一个 TimelineEntry
     for (TimelineEntry entry in allEntries) {
-      if (entry.start < _timeMin) {
-        _timeMin = entry.start;
-      }
-      if (entry.end > _timeMax) {
-        _timeMax = entry.end;
-      }
-      if (previous != null) {
-        previous.next = entry;
-      }
+      // 找出最早与最晚
+      if (entry.start < _timeMin) _timeMin = entry.start;
+      if (entry.end > _timeMax) _timeMax = entry.end;
+
+      if (previous != null) previous.next = entry;
+
+      // 设置上一个 TimelineEntry
       entry.previous = previous;
+
+      // 更新 TimelineEntry
       previous = entry;
 
       TimelineEntry parent;
+
       double minDistance = double.maxFinite;
+
+      // 从远到近匹配 parent
       for (TimelineEntry checkEntry in allEntries) {
+        // 检查条目是否为 TimelineEntryType.Era 即时代，只有时代有资格作为 事件Parent
         if (checkEntry.type == TimelineEntryType.Era) {
+          // 计算事件开始与时代开始日期之间的距离
           double distance = entry.start - checkEntry.start;
           double distanceEnd = entry.start - checkEntry.end;
+
+          // distance > 0 保证事件在时代开始日期之后
+          // distanceEnd < 0 TODO:...
+          // distance < minDistance 保证当前匹配到的时代晚于上次匹配到的时代
           if (distance > 0 && distanceEnd < 0 && distance < minDistance) {
             minDistance = distance;
             parent = checkEntry;
           }
         }
       }
+
       if (parent != null) {
         entry.parent = parent;
         if (parent.children == null) {
@@ -686,7 +698,7 @@ class Timeline {
         }
         parent.children.add(entry);
       } else {
-        /// no parent, so this is a root entry.
+        /// 没有父母，所以这是一个根条目。
         _entries.add(entry);
       }
     }
@@ -698,53 +710,58 @@ class Timeline {
     return _entriesById[id];
   }
 
-  /// Make sure that while scrolling we're within the correct timeline bounds.
-  clampScroll() {
-    _scrollMetrics = null;
-    _scrollPhysics = null;
-    _scrollSimulation = null;
-
-    /// Get measurements values for the current viewport.
-    double scale = computeScale(_start, _end);
-    double padTop = (devicePadding.top + ViewportPaddingTop) / scale;
-    double padBottom = (devicePadding.bottom + ViewportPaddingBottom) / scale;
-    bool fixStart = _start < _timeMin - padTop;
-    bool fixEnd = _end > _timeMax + padBottom;
-
-    /// As the scale changes we need to re-solve the right padding
-    /// Don't think there's an analytical single solution for this
-    /// so we do it in steps approaching the correct answer.
-    for (int i = 0; i < 20; i++) {
-      double scale = computeScale(_start, _end);
-      double padTop = (devicePadding.top + ViewportPaddingTop) / scale;
-      double padBottom = (devicePadding.bottom + ViewportPaddingBottom) / scale;
-      if (fixStart) {
-        _start = _timeMin - padTop;
-      }
-      if (fixEnd) {
-        _end = _timeMax + padBottom;
-      }
-    }
-    if (_end < _start) {
-      _end = _start + _height / scale;
-    }
-
-    /// Be sure to reschedule a new frame.
-    if (!_isFrameScheduled) {
-      _isFrameScheduled = true;
-      _lastFrameTime = 0.0;
-      SchedulerBinding.instance.scheduleFrameCallback(beginFrame);
-    }
-  }
+  // /// 确保滚动时我们在正确的时间轴范围内。
+  // clampScroll() {
+  //   _scrollMetrics = null;
+  //   _scrollPhysics = null;
+  //   _scrollSimulation = null;
+  //
+  //   /// Get measurements values for the current viewport.
+  //   double scale = computeScale(_start, _end);
+  //   double padTop = (devicePadding.top + ViewportPaddingTop) / scale;
+  //   double padBottom = (devicePadding.bottom + ViewportPaddingBottom) / scale;
+  //   bool fixStart = _start < _timeMin - padTop;
+  //   bool fixEnd = _end > _timeMax + padBottom;
+  //
+  //   /// As the scale changes we need to re-solve the right padding
+  //   /// Don't think there's an analytical single solution for this
+  //   /// so we do it in steps approaching the correct answer.
+  //   for (int i = 0; i < 20; i++) {
+  //     double scale = computeScale(_start, _end);
+  //     double padTop = (devicePadding.top + ViewportPaddingTop) / scale;
+  //     double padBottom = (devicePadding.bottom + ViewportPaddingBottom) / scale;
+  //     if (fixStart) {
+  //       _start = _timeMin - padTop;
+  //     }
+  //     if (fixEnd) {
+  //       _end = _timeMax + padBottom;
+  //     }
+  //   }
+  //   if (_end < _start) {
+  //     _end = _start + _height / scale;
+  //   }
+  //
+  //   /// Be sure to reschedule a new frame.
+  //   if (!_isFrameScheduled) {
+  //     _isFrameScheduled = true;
+  //     _lastFrameTime = 0.0;
+  //     SchedulerBinding.instance.scheduleFrameCallback(beginFrame);
+  //   }
+  // }
 
   /// 此方法根据当前的开始和结束位置来限制当前视口。
-  void setViewport(
-      {var start = double.maxFinite,
-      var end = double.maxFinite,
-      var height = double.maxFinite,
-      var pad = false,
-      var velocity = double.maxFinite,
-      var animate = false}) {
+  void setViewport({
+    // 时间线起始位置
+    var start = double.maxFinite,
+    // 时间线结束位置
+    var end = double.maxFinite,
+    var height = double.maxFinite,
+    // 是否设置 padding 值
+    var pad = false,
+    var velocity = double.maxFinite,
+    // 此操作是否使用动画
+    var animate = false,
+  }) {
     /// 计算当前高度
     if (height != double.maxFinite) {
       if (_height == 0.0 && _entries != null && _entries.length > 0) {

@@ -27,6 +27,7 @@ class Ticks {
     final Canvas canvas = context.canvas;
 
     final bottom = height;
+
     double tickDistance = TickDistance.toDouble();
     double textTickDistance = TextTickDistance.toDouble();
 

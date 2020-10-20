@@ -11,7 +11,7 @@ import 'package:nima/nima/math/aabb.dart' as nima;
 import 'package:timeline/timeline/timeline.dart';
 
 /// An object representing the renderable assets loaded from `timeline.json`.
-/// 
+///
 /// Each [TimelineAsset] encapsulates all the relevant properties for drawing,
 /// as well as maintaining a reference to its original [TimelineEntry].
 class TimelineAsset {
@@ -54,7 +54,7 @@ class TimelineFlare extends TimelineAnimatedAsset {
   flare.ActorAnimation animation;
 
   /// Some Flare assets will have multiple idle animations (e.g. 'Humans'),
-  /// others will have an intro&idle animation (e.g. 'Sun is Born'). 
+  /// others will have an intro&idle animation (e.g. 'Sun is Born').
   /// All this information is in `timeline.json` file, and it's de-serialized in the
   /// [Timeline.loadFromBundle()] method, called during startup.
   /// and custom-computed AABB bounds to properly position them in the timeline.
@@ -62,33 +62,39 @@ class TimelineFlare extends TimelineAnimatedAsset {
   flare.ActorAnimation idle;
   List<flare.ActorAnimation> idleAnimations;
   flare.AABB setupAABB;
-
 }
 
 /// A label for [TimelineEntry].
-enum TimelineEntryType { Era, Incident }
+enum TimelineEntryType {
+  // 时代
+  Era,
+  // 事件
+  Incident,
+}
 
 /// Each entry in the timeline is represented by an instance of this object.
 /// Each favorite, search result and detail page will grab the information from a reference
 /// to this object.
-/// 
+///
 /// They are all initialized at startup time by the [BlocProvider] constructor.
 class TimelineEntry {
   TimelineEntryType type;
 
   /// Used to calculate how many lines to draw for the bubble in the timeline.
   int lineCount = 1;
-  /// 
+
+  ///
   String _label;
   String articleFilename;
   String id;
 
   Color accent;
 
-  /// Each entry constitues an element of a tree: 
+  /// Each entry constitues an element of a tree:
   /// eras are grouped into spanning eras and events are placed into the eras they belong to.
   TimelineEntry parent;
   List<TimelineEntry> children;
+
   /// All the timeline entries are also linked together to easily access the next/previous event.
   /// After a couple of seconds of inactivity on the timeline, a previous/next entry button will appear
   /// to allow the user to navigate faster between adjacent events.
@@ -120,6 +126,7 @@ class TimelineEntry {
   }
 
   String get label => _label;
+
   /// Some labels already have newline characters to adjust their alignment.
   /// Detect the occurrence and add information regarding the line-count.
   set label(String value) {

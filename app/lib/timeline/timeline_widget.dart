@@ -21,6 +21,7 @@ import 'package:timeline/timeline/timeline_utils.dart';
 class TimelineWidget extends StatefulWidget {
   final MenuItemData focusItem;
   final Timeline timeline;
+
   TimelineWidget(this.focusItem, this.timeline, {Key key}) : super(key: key);
 
   @override
@@ -37,7 +38,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   double _scaleStartYearStart = -100.0;
   double _scaleStartYearEnd = 100.0;
 
-  /// 当触摸[时间轴]上的气泡时，请跟踪已触摸哪个元素以便移至[article_widget]。
+  /// 当触摸[Timeline]上的气泡时，请跟踪已触摸哪个元素以便移至[article_widget]。
   TapTarget _touchedBubble;
   TimelineEntry _touchedEntry;
 
@@ -89,10 +90,12 @@ class _TimelineWidgetState extends State<TimelineWidget> {
 
   ///以下两个回调传递给 [TimelineRenderWidget]，因此可以将信息传递回此小部件。
   onTouchBubble(TapTarget bubble) {
+    print('----------------onTouchBubble------------------');
     _touchedBubble = bubble;
   }
 
   onTouchEntry(TimelineEntry entry) {
+    print('----------------onTouchEntry------------------');
     _touchedEntry = entry;
   }
 
@@ -143,18 +146,20 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   /// 当执行长按操作时，将调整视口，以便根据[TimelineEntry]信息更新可见的开始时间和结束时间。
   /// 长按的气泡将漂浮到视口的顶部，并且视口将适当缩放。
   void _longPress() {
-    EdgeInsets devicePadding = MediaQuery.of(context).padding;
+    print('-----------------_longPress---------------------');
     if (_touchedBubble != null) {
       MenuItemData target = MenuItemData.fromEntry(_touchedBubble.entry);
 
+      // 使得长按的气泡将漂浮到视口的顶部，并设置 padding，让气泡距离顶部有一段距离
       timeline.padding = EdgeInsets.only(
           top: TopOverlap +
-              devicePadding.top +
+              MediaQuery.of(context).padding.top +
               target.padTop +
               Timeline.Parallax,
           bottom: target.padBottom);
+
       timeline.setViewport(
-          start: target.start, end: target.end, animate: true, pad: true);
+          start: 0.0, end: 2000.0, animate: true, pad: true, velocity: 0.1);
     }
   }
 
@@ -172,6 +177,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
           _headerBackgroundColor = background;
         });
       };
+
       /// 更新[时间轴]对象的标签。
       timeline.onEraChanged = (TimelineEntry entry) {
         setState(() {
@@ -271,8 +277,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
                             IconButton(
-                              padding:
-                                  EdgeInsets.only(left: 20.0, right: 20.0),
+                              padding: EdgeInsets.only(left: 20.0, right: 20.0),
                               color: _headerTextColor != null
                                   ? _headerTextColor
                                   : Colors.black.withOpacity(0.5),
@@ -303,29 +308,23 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                                           height: 60.0,
                                           width: 60.0,
                                           padding: EdgeInsets.all(18.0),
-                                          color:
-                                              Colors.white.withOpacity(0.0),
+                                          color: Colors.white.withOpacity(0.0),
                                           child: FlareActor(
                                               "assets/heart_toolbar.flr",
-                                              animation: _showFavorites
-                                                  ? "On"
-                                                  : "Off",
+                                              animation:
+                                                  _showFavorites ? "On" : "Off",
                                               shouldClip: false,
-                                              color: _headerTextColor !=
-                                                      null
+                                              color: _headerTextColor != null
                                                   ? _headerTextColor
                                                   : darkText.withOpacity(
-                                                      darkText.opacity *
-                                                          0.75),
-                                              alignment:
-                                                  Alignment.centerRight),
+                                                      darkText.opacity * 0.75),
+                                              alignment: Alignment.centerRight),
                                         )),
                                     onTap: () {
                                       timeline.showFavorites =
                                           !timeline.showFavorites;
                                       setState(() {
-                                        _showFavorites =
-                                            timeline.showFavorites;
+                                        _showFavorites = timeline.showFavorites;
                                       });
                                     })),
                           ]))

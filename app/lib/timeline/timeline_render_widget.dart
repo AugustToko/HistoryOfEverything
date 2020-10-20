@@ -84,7 +84,7 @@ class TimelineRenderObject extends RenderBox {
     Color.fromARGB(255, 128, 28, 15)
   ];
 
-  /// [Ticks] 距离顶部的位置 (屏幕顶部到 [AppBar] 的大小)
+  /// [Ticks] 距离顶部的位置 ([AppBar] 宽度)
   double _topOverlap = 0.0;
   Ticks _ticks = Ticks();
   Timeline _timeline;
@@ -263,7 +263,8 @@ class TimelineRenderObject extends RenderBox {
         canvas.drawRect(
             Rect.fromLTWH(
                 offset.dx, offset.dy, size.width, y1 - offset.dy + 1.0),
-            ui.Paint()..color = backgroundColors.first.color);
+            // ui.Paint()..color = backgroundColors.first.color);
+            ui.Paint()..color = Colors.green);
       }
 
       // 填充@2
@@ -277,6 +278,8 @@ class TimelineRenderObject extends RenderBox {
 
     final scale = size.height / (renderEnd - renderStart);
 
+    // print('renderStart: $renderStart');
+    // print('renderEnd: $renderEnd');
     // print(scale.toStringAsFixed(20));
 
     // if (timeline.renderAssets != null) {
@@ -490,10 +493,13 @@ class TimelineRenderObject extends RenderBox {
 
     /// 在屏幕左侧绘制 [Ticks]。
     canvas.save();
+    /// 限制 Ticks 绘制于 AppBar 之下
     canvas.clipRect(Rect.fromLTWH(
-        offset.dx, offset.dy + topOverlap, size.width, size.height));
+        offset.dx, offset.dy + topOverlap, size.width, size.height - topOverlap));
+
     _ticks.paint(
         context, offset, -renderStart * scale, scale, size.height, timeline);
+
     canvas.restore();
 
     /// And then draw the rest of the timeline.
