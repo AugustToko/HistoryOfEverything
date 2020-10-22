@@ -38,7 +38,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   double _scaleStartYearStart = -100.0;
   double _scaleStartYearEnd = 100.0;
 
-  /// 当触摸[Timeline]上的气泡时，请跟踪已触摸哪个元素以便移至[article_widget]。
+  /// 当触摸[Timeline]上的气泡时，请跟踪已触摸哪个元素以便移至 [article_widget]。
   TapTarget _touchedBubble;
   TimelineEntry _touchedEntry;
 
@@ -75,41 +75,45 @@ class _TimelineWidgetState extends State<TimelineWidget> {
     double focus = _scaleStartYearStart + details.focalPoint.dy * scale;
     double focalDiff =
         (_scaleStartYearStart + _lastFocalPoint.dy * scale) - focus;
-    timeline.setViewport(
-        start: focus + (_scaleStartYearStart - focus) / changeScale + focalDiff,
-        end: focus + (_scaleStartYearEnd - focus) / changeScale + focalDiff,
-        height: context.size.height,
-        animate: true);
+    timeline.setViewport(start: focus + (_scaleStartYearStart - focus) / changeScale + focalDiff, end: focus + (_scaleStartYearEnd - focus) / changeScale + focalDiff, height: context.size.height, animate: true);
   }
 
   void _scaleEnd(ScaleEndDetails details) {
     timeline.isInteracting = false;
-    timeline.setViewport(
-        velocity: details.velocity.pixelsPerSecond.dy, animate: true);
+    timeline.setViewport(velocity: details.velocity.pixelsPerSecond.dy, animate: true);
   }
 
   ///以下两个回调传递给 [TimelineRenderWidget]，因此可以将信息传递回此小部件。
   onTouchBubble(TapTarget bubble) {
-    print('----------------onTouchBubble------------------');
     _touchedBubble = bubble;
+    // print('----------------onTouchBubble: ${bubble == null ? 'is null' : 'is not null'}');
+    // print('${bubble?.entry?.articleFilename}');
   }
 
+  /// 触发方式 ？
   onTouchEntry(TimelineEntry entry) {
-    print('----------------onTouchEntry------------------');
     _touchedEntry = entry;
+    // print('----------------onTouchEntry ${entry == null ? 'is null' : 'is not null'}');
+    // print('${entry?.articleFilename}');
   }
 
-  void _tapDown(TapDownDetails details) {
+  /// 此操作令时间线停止运动
+  void _tapDown(_) {
+    print('---------------tapDown---------------------');
     timeline.setViewport(velocity: 0.0, animate: true);
   }
 
   /// 如果 [TimelineRenderWidget] 已将 [_touchedBubble] 设置为时间线上当前触摸的气泡，则从屏
   /// 幕上移开手指后，应用程序将检查触摸操作是否包含缩放操作。 如果是这样，请相应地调整布局。 否则，
-  /// 触发点击的气泡的[Navigator.push]。 这会将应用程序移至 [ArticleWidget]。
+  /// 触发点击的气泡的 [Navigator.push]。 这会将应用程序移至 [ArticleWidget]。
   void _tapUp(TapUpDetails details) {
+    print('------------------tapUp------------------');
     EdgeInsets devicePadding = MediaQuery.of(context).padding;
+
     if (_touchedBubble != null) {
+      // 检查触摸操作是否包含缩放操作，如何命中该操作？
       if (_touchedBubble.zoom) {
+        print('-----------------_touchedBubble.zoom ----------');
         MenuItemData target = MenuItemData.fromEntry(_touchedBubble.entry);
 
         timeline.padding = EdgeInsets.only(
@@ -118,14 +122,15 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                 target.padTop +
                 Timeline.Parallax,
             bottom: target.padBottom);
-        timeline.setViewport(
-            start: target.start, end: target.end, animate: true, pad: true);
+
+        timeline.setViewport(start: target.start, end: target.end, animate: true, pad: true);
       } else {
         widget.timeline.isActive = false;
 
+        // 非缩放操作，进入相应的条目页面
         Navigator.of(context)
             .push(MaterialPageRoute(
-                builder: (BuildContext context) =>
+                builder: (context) =>
                     ArticleWidget(article: _touchedBubble.entry)))
             .then((v) => widget.timeline.isActive = true);
       }
@@ -138,8 +143,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
               target.padTop +
               Timeline.Parallax,
           bottom: target.padBottom);
-      timeline.setViewport(
-          start: target.start, end: target.end, animate: true, pad: true);
+      timeline.setViewport(start: target.start, end: target.end, animate: true, pad: true);
     }
   }
 
@@ -158,8 +162,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
               Timeline.Parallax,
           bottom: target.padBottom);
 
-      timeline.setViewport(
-          start: 0.0, end: 2000.0, animate: true, pad: true, velocity: 0.1);
+      timeline.setViewport(start: target.start, end: target.end, animate: true, pad: true);
     }
   }
 
@@ -167,18 +170,23 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   initState() {
     super.initState();
     if (timeline != null) {
+      // 设置激活标签
       widget.timeline.isActive = true;
+      // 设置是代名称
       _eraName = timeline.currentEra != null
           ? timeline.currentEra.label
           : DefaultEraName;
-      timeline.onHeaderColorsChanged = (Color background, Color text) {
+
+      // 设置头部颜色回调
+      timeline.onHeaderColorsChanged = (Color background, Color textColor) {
         setState(() {
-          _headerTextColor = text;
+          _headerTextColor = textColor;
           _headerBackgroundColor = background;
         });
       };
 
       /// 更新[时间轴]对象的标签。
+      /// 设置时代变更回调
       timeline.onEraChanged = (TimelineEntry entry) {
         setState(() {
           _eraName = entry != null ? entry.label : DefaultEraName;
@@ -196,39 +204,41 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   void didUpdateWidget(covariant TimelineWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (timeline != oldWidget.timeline && timeline != null) {
-      setState(() {
-        _headerTextColor = timeline.headerTextColor;
-        _headerBackgroundColor = timeline.headerBackgroundColor;
-      });
+    if (timeline == oldWidget.timeline || timeline == null) return;
 
-      timeline.onHeaderColorsChanged = (Color background, Color text) {
-        setState(() {
-          _headerTextColor = text;
-          _headerBackgroundColor = background;
-        });
-      };
-      timeline.onEraChanged = (TimelineEntry entry) {
-        setState(() {
-          _eraName = entry != null ? entry.label : DefaultEraName;
-        });
-      };
+    setState(() {
+      _headerTextColor = timeline.headerTextColor;
+      _headerBackgroundColor = timeline.headerBackgroundColor;
+    });
+
+    timeline.onHeaderColorsChanged = (Color background, Color text) {
       setState(() {
-        _eraName =
-            timeline.currentEra != null ? timeline.currentEra : DefaultEraName;
-        _showFavorites = timeline.showFavorites;
+        _headerTextColor = text;
+        _headerBackgroundColor = background;
       });
-    }
+    };
+
+    timeline.onEraChanged = (TimelineEntry entry) {
+      setState(() {
+        _eraName = entry != null ? entry.label : DefaultEraName;
+      });
+    };
+
+    setState(() {
+      _eraName =
+          timeline.currentEra != null ? timeline.currentEra : DefaultEraName;
+      _showFavorites = timeline.showFavorites;
+    });
   }
 
   /// 这是 [StatefulWidget] 生命周期方法。 这里已被覆盖，因此我们可以正确地更新 [Timeline] 小部件。
   @override
   deactivate() {
     super.deactivate();
-    if (timeline != null) {
-      timeline.onHeaderColorsChanged = null;
-      timeline.onEraChanged = null;
-    }
+    if (timeline == null) return;
+
+    timeline.onHeaderColorsChanged = null;
+    timeline.onEraChanged = null;
   }
 
   /// 此小部件包装在[Scaffold]中，具有经典的Material Design视觉布局结构。
@@ -238,10 +248,14 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   /// -[BackdropFilter]，它包装顶部标题栏，并带有“后退”按钮，“收藏夹”按钮及其颜色。
   @override
   Widget build(BuildContext context) {
+    print('------------DEVICE HEIGHT------------');
+    print(MediaQuery.of(context).size.height);
+
+    if (timeline == null) return const SizedBox();
+
     EdgeInsets devicePadding = MediaQuery.of(context).padding;
-    if (timeline != null) {
-      timeline.devicePadding = devicePadding;
-    }
+    timeline.devicePadding = devicePadding;
+
     return Scaffold(
       backgroundColor: Colors.greenAccent,
       body: GestureDetector(
@@ -276,6 +290,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                       child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
+                            // 返回按钮
                             IconButton(
                               padding: EdgeInsets.only(left: 20.0, right: 20.0),
                               color: _headerTextColor != null
@@ -289,6 +304,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                                 return true;
                               },
                             ),
+                            // appbar title
                             Text(
                               _eraName,
                               textAlign: TextAlign.left,
@@ -300,33 +316,30 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                                       : darkText.withOpacity(
                                           darkText.opacity * 0.75)),
                             ),
-                            Expanded(
-                                child: GestureDetector(
-                                    child: Transform.translate(
-                                        offset: const Offset(0.0, 0.0),
-                                        child: Container(
-                                          height: 60.0,
-                                          width: 60.0,
-                                          padding: EdgeInsets.all(18.0),
-                                          color: Colors.white.withOpacity(0.0),
-                                          child: FlareActor(
-                                              "assets/heart_toolbar.flr",
-                                              animation:
-                                                  _showFavorites ? "On" : "Off",
-                                              shouldClip: false,
-                                              color: _headerTextColor != null
-                                                  ? _headerTextColor
-                                                  : darkText.withOpacity(
-                                                      darkText.opacity * 0.75),
-                                              alignment: Alignment.centerRight),
-                                        )),
-                                    onTap: () {
-                                      timeline.showFavorites =
-                                          !timeline.showFavorites;
-                                      setState(() {
-                                        _showFavorites = timeline.showFavorites;
-                                      });
-                                    })),
+                            const Spacer(),
+                            // 收藏按钮
+                            GestureDetector(
+                                child: Container(
+                                  height: 60.0,
+                                  width: 60.0,
+                                  padding: EdgeInsets.all(18.0),
+                                  color: Colors.white.withOpacity(0.0),
+                                  child: FlareActor("assets/heart_toolbar.flr",
+                                      animation: _showFavorites ? "On" : "Off",
+                                      shouldClip: false,
+                                      color: _headerTextColor != null
+                                          ? _headerTextColor
+                                          : darkText.withOpacity(
+                                              darkText.opacity * 0.75),
+                                      alignment: Alignment.centerRight),
+                                ),
+                                onTap: () {
+                                  timeline.showFavorites =
+                                      !timeline.showFavorites;
+                                  setState(() {
+                                    _showFavorites = timeline.showFavorites;
+                                  });
+                                }),
                           ]))
                 ])
           ])),

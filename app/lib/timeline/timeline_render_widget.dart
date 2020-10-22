@@ -145,29 +145,28 @@ class TimelineRenderObject extends RenderBox {
     updateFocusItem();
   }
 
-  /// If [_focusItem] has been updated with a new value, update the current view.
+  /// 如果 [_focusItem] 已更新为新值，请更新当前视图。
   void updateFocusItem() {
     if (_processedFocusItem == _focusItem) {
       return;
     }
+
     if (_focusItem == null || timeline == null || topOverlap == 0.0) {
       return;
     }
 
-    /// Adjust the current timeline padding and consequentely the viewport.
+    print('setViewport by updateFocusItem');
+
+    /// 调整当前的时间轴填充，从而调整视口。
     if (_focusItem.pad) {
       timeline.padding = EdgeInsets.only(
           top: topOverlap + _focusItem.padTop + Timeline.Parallax,
           bottom: _focusItem.padBottom);
-      timeline.setViewport(
-          start: _focusItem.start,
-          end: _focusItem.end,
-          animate: true,
-          pad: true);
+
+      timeline.setViewport(start: _focusItem.start, end: _focusItem.end, animate: true, pad: true);
     } else {
       timeline.padding = EdgeInsets.zero;
-      timeline.setViewport(
-          start: _focusItem.start, end: _focusItem.end, animate: true);
+      timeline.setViewport(start: _focusItem.start, end: _focusItem.end, animate: true);
     }
     _processedFocusItem = _focusItem;
   }
@@ -199,6 +198,8 @@ class TimelineRenderObject extends RenderBox {
   @override
   void performLayout() {
     if (_timeline != null) {
+      print('------------setViewport by performLayout');
+      print('------------height: ${size.height}');
       _timeline.setViewport(height: size.height, animate: true);
     }
   }

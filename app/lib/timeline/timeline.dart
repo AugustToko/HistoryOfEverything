@@ -8,6 +8,7 @@ import 'package:flare_flutter/flare.dart' as flare;
 import 'package:flare_dart/animation/actor_animation.dart' as flare;
 import 'package:flare_dart/math/aabb.dart' as flare;
 import 'package:flare_dart/math/vec2d.dart' as flare;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -18,6 +19,7 @@ import 'package:nima/nima/animation/actor_animation.dart' as nima;
 import 'package:nima/nima/math/aabb.dart' as nima;
 import 'package:nima/nima/math/vec2d.dart' as nima;
 import 'package:timeline/timeline/timeline_utils.dart';
+import 'package:timeline/timeline/timeline_widget.dart';
 
 import 'timeline_entry.dart';
 
@@ -58,11 +60,13 @@ class Timeline {
   /// [ScrollPhysics] based on the platform we're on.
   final TargetPlatform _platform;
 
-  double _start = 0.0;
-  double _end = 0.0;
+  /// 用于标记视口开始与结束位置
+  double _start = 0.0; // 视口开始
+  double _end = 0.0; //视口结束
   double _renderStart;
   double _renderEnd;
   double _lastFrameTime = 0.0;
+  /// [TimelineWidget] 高度
   double _height = 0.0;
   double _firstOnScreenEntryY = 0.0;
   double _lastEntryY = 0.0;
@@ -151,6 +155,7 @@ class Timeline {
   ChangeHeaderColorCallback onHeaderColorsChanged;
 
   Timeline(this._platform) {
+    print('------------setViewport by Timeline(this._platform)');
     setViewport(start: 1536.0, end: 3072.0);
   }
 
@@ -292,345 +297,343 @@ class Timeline {
       Map map = entry as Map;
 
       /// 完整性检查。
-      if (map != null) {
-        /// 如果是 “事件"，则创建当前条目并填写当前日期；如果是 "时代"，则查找 "start" 属性。
-        /// 一些条目将具有一个 "开始" 元素，但没有指定一个 "结束" 元素。 这些条目指定了一个特定事件，
-        /// 例如历史上 "人类" 的出现，但尚未结束。
-        TimelineEntry timelineEntry = TimelineEntry();
+      if (map == null) continue;
 
-        if (map.containsKey("date")) {
-          timelineEntry.type = TimelineEntryType.Incident;
-          dynamic date = map["date"];
-          timelineEntry.start = date is int ? date.toDouble() : date;
-        } else if (map.containsKey("start")) {
-          timelineEntry.type = TimelineEntryType.Era;
-          dynamic start = map["start"];
-          timelineEntry.start = start is int ? start.toDouble() : start;
-        } else {
-          continue;
-        }
+      /// 如果是 “事件"，则创建当前条目并填写当前日期；如果是 "时代"，则查找 "start" 属性。
+      /// 一些条目将具有一个 "开始" 元素，但没有指定一个 "结束" 元素。 这些条目指定了一个特定事件，
+      /// 例如历史上 "人类" 的出现，但尚未结束。
+      TimelineEntry timelineEntry = TimelineEntry();
 
-        /// If a custom background color for this [TimelineEntry] is specified,
-        /// extract its RGB values and save them for reference, along with the starting
-        /// date of the current entry.
-        if (map.containsKey("background")) {
-          dynamic bg = map["background"];
-          if (bg is List && bg.length >= 3) {
-            _backgroundColors.add(TimelineBackgroundColor()
-              ..color =
-                  Color.fromARGB(255, bg[0] as int, bg[1] as int, bg[2] as int)
-              ..start = timelineEntry.start);
-          }
-        }
-
-        /// An accent color is also specified at times.
-        dynamic accent = map["accent"];
-        if (accent is List && accent.length >= 3) {
-          timelineEntry.accent = Color.fromARGB(
-              accent.length > 3 ? accent[3] as int : 255,
-              accent[0] as int,
-              accent[1] as int,
-              accent[2] as int);
-        }
-
-        /// [Ticks]也可以具有自定义颜色，因此即使使用自定义彩色背景，也可以看到所有内容。
-        if (map.containsKey("ticks")) {
-          dynamic ticks = map["ticks"];
-          if (ticks is Map) {
-            Color bgColor = Colors.black;
-            Color longColor = Colors.black;
-            Color shortColor = Colors.black;
-            Color textColor = Colors.black;
-
-            dynamic bg = ticks["background"];
-            if (bg is List && bg.length >= 3) {
-              bgColor = Color.fromARGB(bg.length > 3 ? bg[3] as int : 255,
-                  bg[0] as int, bg[1] as int, bg[2] as int);
-            }
-            dynamic long = ticks["long"];
-            if (long is List && long.length >= 3) {
-              longColor = Color.fromARGB(long.length > 3 ? long[3] as int : 255,
-                  long[0] as int, long[1] as int, long[2] as int);
-            }
-            dynamic short = ticks["short"];
-            if (short is List && short.length >= 3) {
-              shortColor = Color.fromARGB(
-                  short.length > 3 ? short[3] as int : 255,
-                  short[0] as int,
-                  short[1] as int,
-                  short[2] as int);
-            }
-            dynamic text = ticks["text"];
-            if (text is List && text.length >= 3) {
-              textColor = Color.fromARGB(text.length > 3 ? text[3] as int : 255,
-                  text[0] as int, text[1] as int, text[2] as int);
-            }
-
-            _tickColors.add(TickColors()
-              ..background = bgColor
-              ..long = longColor
-              ..short = shortColor
-              ..text = textColor
-              ..start = timelineEntry.start
-              ..screenY = 0.0);
-          }
-        }
-
-        /// If a `header` element is present, de-serialize the colors for it too.
-        if (map.containsKey("header")) {
-          dynamic header = map["header"];
-          if (header is Map) {
-            Color bgColor = Colors.black;
-            Color textColor = Colors.black;
-
-            dynamic bg = header["background"];
-            if (bg is List && bg.length >= 3) {
-              bgColor = Color.fromARGB(bg.length > 3 ? bg[3] as int : 255,
-                  bg[0] as int, bg[1] as int, bg[2] as int);
-            }
-            dynamic text = header["text"];
-            if (text is List && text.length >= 3) {
-              textColor = Color.fromARGB(text.length > 3 ? text[3] as int : 255,
-                  text[0] as int, text[1] as int, text[2] as int);
-            }
-
-            _headerColors.add(HeaderColors()
-              ..background = bgColor
-              ..text = textColor
-              ..start = timelineEntry.start
-              ..screenY = 0.0);
-          }
-        }
-
-        /// 有些元素将指定 “结束” 时间。 如果此条目中没有 `end` 键，则根据事件的类型创建值：
-        /// -时代使用当前年份作为结束时间。
-        /// -其他条目只是单个时间点（开始==结束）。
-        if (map.containsKey("end")) {
-          dynamic end = map["end"];
-          timelineEntry.end = end is int ? end.toDouble() : end;
-        } else if (timelineEntry.type == TimelineEntryType.Era) {
-          timelineEntry.end = DateTime.now().year.toDouble() * 10.0;
-        } else {
-          timelineEntry.end = timelineEntry.start;
-        }
-
-        /// The label is a brief description for the current entry.
-        if (map.containsKey("label")) {
-          timelineEntry.label = map["label"] as String;
-        }
-
-        /// Some entries will also have an id
-        if (map.containsKey("id")) {
-          timelineEntry.id = map["id"] as String;
-          _entriesById[timelineEntry.id] = timelineEntry;
-        }
-        if (map.containsKey("article")) {
-          timelineEntry.articleFilename = map["article"] as String;
-        }
-
-        /// The `asset` key in the current entry contains all the information
-        /// for the nima/flare animation file that'll be played on the timeline.
-        ///
-        /// `asset` is a JSON object thus made:
-        /// {
-        ///   - source: the name of the nima/flare file in the assets folder;
-        ///   - width/height/offset/bounds/gap: sizes of the animation to properly align it in the timeline, together with its Axis-Aligned Bounding Box container.
-        ///   - intro: some files have an 'intro' animation, to be played before idling.
-        ///   - idle: some files have one or more idle animations, and these are their names.
-        ///   - loop: some animations shouldn't loop (e.g. Big Bang) but just settle onto their idle animation. If that's the case, this flag is raised.
-        ///   - scale: a custom scale value.
-        /// }
-        if (map.containsKey("asset")) {
-          TimelineAsset asset;
-          Map assetMap = map["asset"] as Map;
-          String source = assetMap["source"];
-          String filename = "assets/" + source;
-          String extension = getExtension(source);
-
-          /// Instantiate the correct object based on the file extension.
-          switch (extension) {
-            case "flr":
-              TimelineFlare flareAsset = TimelineFlare();
-              asset = flareAsset;
-              flare.FlutterActor actor = _flareResources[filename];
-              if (actor == null) {
-                actor = flare.FlutterActor();
-
-                /// Flare library function to load the [FlutterActor]
-                bool success = await actor.loadFromBundle(rootBundle, filename);
-                if (success) {
-                  /// Populate the Map.
-                  _flareResources[filename] = actor;
-                }
-              }
-              if (actor != null) {
-                /// Distinguish between the actual actor, and its intance.
-                flareAsset.actorStatic = actor.artboard;
-                flareAsset.actorStatic.initializeGraphics();
-                flareAsset.actor = actor.artboard.makeInstance();
-                flareAsset.actor.initializeGraphics();
-
-                /// and the reference to their first animation is grabbed.
-                flareAsset.animation = actor.artboard.animations[0];
-
-                dynamic name = assetMap["idle"];
-                if (name is String) {
-                  if ((flareAsset.idle = flareAsset.actor.getAnimation(name)) !=
-                      null) {
-                    flareAsset.animation = flareAsset.idle;
-                  }
-                } else if (name is List) {
-                  for (String animationName in name) {
-                    flare.ActorAnimation animation =
-                        flareAsset.actor.getAnimation(animationName);
-                    if (animation != null) {
-                      if (flareAsset.idleAnimations == null) {
-                        flareAsset.idleAnimations =
-                            List<flare.ActorAnimation>();
-                      }
-                      flareAsset.idleAnimations.add(animation);
-                      flareAsset.animation = animation;
-                    }
-                  }
-                }
-
-                name = assetMap["intro"];
-                if (name is String) {
-                  if ((flareAsset.intro =
-                          flareAsset.actor.getAnimation(name)) !=
-                      null) {
-                    flareAsset.animation = flareAsset.intro;
-                  }
-                }
-
-                /// Make sure that all the initial values are set for the actor and for the actor instance.
-                flareAsset.animationTime = 0.0;
-                flareAsset.actor.advance(0.0);
-                flareAsset.setupAABB = flareAsset.actor.computeAABB();
-                flareAsset.animation
-                    .apply(flareAsset.animationTime, flareAsset.actor, 1.0);
-                flareAsset.animation.apply(
-                    flareAsset.animation.duration, flareAsset.actorStatic, 1.0);
-                flareAsset.actor.advance(0.0);
-                flareAsset.actorStatic.advance(0.0);
-
-                dynamic loop = assetMap["loop"];
-                flareAsset.loop = loop is bool ? loop : true;
-                dynamic offset = assetMap["offset"];
-                flareAsset.offset = offset == null
-                    ? 0.0
-                    : offset is int
-                        ? offset.toDouble()
-                        : offset;
-                dynamic gap = assetMap["gap"];
-                flareAsset.gap = gap == null
-                    ? 0.0
-                    : gap is int
-                        ? gap.toDouble()
-                        : gap;
-
-                dynamic bounds = assetMap["bounds"];
-                if (bounds is List) {
-                  /// Override the AABB for this entry with custom values.
-                  flareAsset.setupAABB = flare.AABB.fromValues(
-                      bounds[0] is int ? bounds[0].toDouble() : bounds[0],
-                      bounds[1] is int ? bounds[1].toDouble() : bounds[1],
-                      bounds[2] is int ? bounds[2].toDouble() : bounds[2],
-                      bounds[3] is int ? bounds[3].toDouble() : bounds[3]);
-                }
-              }
-              break;
-            case "nma":
-              TimelineNima nimaAsset = TimelineNima();
-              asset = nimaAsset;
-              nima.FlutterActor actor = _nimaResources[filename];
-              if (actor == null) {
-                actor = nima.FlutterActor();
-
-                bool success = await actor.loadFromBundle(filename);
-                if (success) {
-                  _nimaResources[filename] = actor;
-                }
-              }
-              if (actor != null) {
-                nimaAsset.actorStatic = actor;
-                nimaAsset.actor = actor.makeInstance();
-
-                dynamic name = assetMap["idle"];
-                if (name is String) {
-                  nimaAsset.animation = nimaAsset.actor.getAnimation(name);
-                } else {
-                  nimaAsset.animation = actor.animations[0];
-                }
-                nimaAsset.animationTime = 0.0;
-                nimaAsset.actor.advance(0.0);
-
-                nimaAsset.setupAABB = nimaAsset.actor.computeAABB();
-                nimaAsset.animation
-                    .apply(nimaAsset.animationTime, nimaAsset.actor, 1.0);
-                nimaAsset.animation.apply(
-                    nimaAsset.animation.duration, nimaAsset.actorStatic, 1.0);
-                nimaAsset.actor.advance(0.0);
-                nimaAsset.actorStatic.advance(0.0);
-                dynamic loop = assetMap["loop"];
-                nimaAsset.loop = loop is bool ? loop : true;
-                dynamic offset = assetMap["offset"];
-                nimaAsset.offset = offset == null
-                    ? 0.0
-                    : offset is int
-                        ? offset.toDouble()
-                        : offset;
-                dynamic gap = assetMap["gap"];
-                nimaAsset.gap = gap == null
-                    ? 0.0
-                    : gap is int
-                        ? gap.toDouble()
-                        : gap;
-                dynamic bounds = assetMap["bounds"];
-                if (bounds is List) {
-                  nimaAsset.setupAABB = nima.AABB.fromValues(
-                      bounds[0] is int ? bounds[0].toDouble() : bounds[0],
-                      bounds[1] is int ? bounds[1].toDouble() : bounds[1],
-                      bounds[2] is int ? bounds[2].toDouble() : bounds[2],
-                      bounds[3] is int ? bounds[3].toDouble() : bounds[3]);
-                }
-              }
-              break;
-
-            default:
-
-              /// Legacy fallback case: some elements could have been just images.
-              TimelineImage imageAsset = TimelineImage();
-              asset = imageAsset;
-
-              ByteData data = await rootBundle.load(filename);
-              Uint8List list = Uint8List.view(data.buffer);
-              ui.Codec codec = await ui.instantiateImageCodec(list);
-              ui.FrameInfo frame = await codec.getNextFrame();
-              imageAsset.image = frame.image;
-
-              break;
-          }
-
-          double scale = 1.0;
-          if (assetMap.containsKey("scale")) {
-            dynamic s = assetMap["scale"];
-            scale = s is int ? s.toDouble() : s;
-          }
-
-          dynamic width = assetMap["width"];
-          asset.width = (width is int ? width.toDouble() : width) * scale;
-
-          dynamic height = assetMap["height"];
-          asset.height = (height is int ? height.toDouble() : height) * scale;
-          asset.entry = timelineEntry;
-          asset.filename = filename;
-          timelineEntry.asset = asset;
-        }
-
-        /// Add this entry to the list.
-        allEntries.add(timelineEntry);
+      if (map.containsKey("date")) {
+        timelineEntry.type = TimelineEntryType.Incident;
+        dynamic date = map["date"];
+        timelineEntry.start = date is int ? date.toDouble() : date;
+      } else if (map.containsKey("start")) {
+        timelineEntry.type = TimelineEntryType.Era;
+        dynamic start = map["start"];
+        timelineEntry.start = start is int ? start.toDouble() : start;
+      } else {
+        continue;
       }
+
+      /// If a custom background color for this [TimelineEntry] is specified,
+      /// extract its RGB values and save them for reference, along with the starting
+      /// date of the current entry.
+      if (map.containsKey("background")) {
+        dynamic bg = map["background"];
+        if (bg is List && bg.length >= 3) {
+          _backgroundColors.add(TimelineBackgroundColor()
+            ..color =
+                Color.fromARGB(255, bg[0] as int, bg[1] as int, bg[2] as int)
+            ..start = timelineEntry.start);
+        }
+      }
+
+      /// An accent color is also specified at times.
+      dynamic accent = map["accent"];
+      if (accent is List && accent.length >= 3) {
+        timelineEntry.accent = Color.fromARGB(
+            accent.length > 3 ? accent[3] as int : 255,
+            accent[0] as int,
+            accent[1] as int,
+            accent[2] as int);
+      }
+
+      /// [Ticks]也可以具有自定义颜色，因此即使使用自定义彩色背景，也可以看到所有内容。
+      if (map.containsKey("ticks")) {
+        dynamic ticks = map["ticks"];
+        if (ticks is Map) {
+          Color bgColor = Colors.black;
+          Color longColor = Colors.black;
+          Color shortColor = Colors.black;
+          Color textColor = Colors.black;
+
+          dynamic bg = ticks["background"];
+          if (bg is List && bg.length >= 3) {
+            bgColor = Color.fromARGB(bg.length > 3 ? bg[3] as int : 255,
+                bg[0] as int, bg[1] as int, bg[2] as int);
+          }
+          dynamic long = ticks["long"];
+          if (long is List && long.length >= 3) {
+            longColor = Color.fromARGB(long.length > 3 ? long[3] as int : 255,
+                long[0] as int, long[1] as int, long[2] as int);
+          }
+          dynamic short = ticks["short"];
+          if (short is List && short.length >= 3) {
+            shortColor = Color.fromARGB(
+                short.length > 3 ? short[3] as int : 255,
+                short[0] as int,
+                short[1] as int,
+                short[2] as int);
+          }
+          dynamic text = ticks["text"];
+          if (text is List && text.length >= 3) {
+            textColor = Color.fromARGB(text.length > 3 ? text[3] as int : 255,
+                text[0] as int, text[1] as int, text[2] as int);
+          }
+
+          _tickColors.add(TickColors()
+            ..background = bgColor
+            ..long = longColor
+            ..short = shortColor
+            ..text = textColor
+            ..start = timelineEntry.start
+            ..screenY = 0.0);
+        }
+      }
+
+      /// If a `header` element is present, de-serialize the colors for it too.
+      if (map.containsKey("header")) {
+        dynamic header = map["header"];
+        if (header is Map) {
+          Color bgColor = Colors.black;
+          Color textColor = Colors.black;
+
+          dynamic bg = header["background"];
+          if (bg is List && bg.length >= 3) {
+            bgColor = Color.fromARGB(bg.length > 3 ? bg[3] as int : 255,
+                bg[0] as int, bg[1] as int, bg[2] as int);
+          }
+          dynamic text = header["text"];
+          if (text is List && text.length >= 3) {
+            textColor = Color.fromARGB(text.length > 3 ? text[3] as int : 255,
+                text[0] as int, text[1] as int, text[2] as int);
+          }
+
+          _headerColors.add(HeaderColors()
+            ..background = bgColor
+            ..text = textColor
+            ..start = timelineEntry.start
+            ..screenY = 0.0);
+        }
+      }
+
+      /// 有些元素将指定 “结束” 时间。 如果此条目中没有 `end` 键，则根据事件的类型创建值：
+      /// -时代使用当前年份作为结束时间。
+      /// -其他条目只是单个时间点（开始==结束）。
+      if (map.containsKey("end")) {
+        dynamic end = map["end"];
+        timelineEntry.end = end is int ? end.toDouble() : end;
+      } else if (timelineEntry.type == TimelineEntryType.Era) {
+        timelineEntry.end = DateTime.now().year.toDouble() * 10.0;
+      } else {
+        timelineEntry.end = timelineEntry.start;
+      }
+
+      /// The label is a brief description for the current entry.
+      if (map.containsKey("label")) {
+        timelineEntry.label = map["label"] as String;
+      }
+
+      /// Some entries will also have an id
+      if (map.containsKey("id")) {
+        timelineEntry.id = map["id"] as String;
+        _entriesById[timelineEntry.id] = timelineEntry;
+      }
+      if (map.containsKey("article")) {
+        timelineEntry.articleFilename = map["article"] as String;
+      }
+
+      /// The `asset` key in the current entry contains all the information
+      /// for the nima/flare animation file that'll be played on the timeline.
+      ///
+      /// `asset` is a JSON object thus made:
+      /// {
+      ///   - source: the name of the nima/flare file in the assets folder;
+      ///   - width/height/offset/bounds/gap: sizes of the animation to properly align it in the timeline, together with its Axis-Aligned Bounding Box container.
+      ///   - intro: some files have an 'intro' animation, to be played before idling.
+      ///   - idle: some files have one or more idle animations, and these are their names.
+      ///   - loop: some animations shouldn't loop (e.g. Big Bang) but just settle onto their idle animation. If that's the case, this flag is raised.
+      ///   - scale: a custom scale value.
+      /// }
+      if (map.containsKey("asset")) {
+        TimelineAsset asset;
+        Map assetMap = map["asset"] as Map;
+        String source = assetMap["source"];
+        String filename = "assets/" + source;
+        String extension = getExtension(source);
+
+        /// Instantiate the correct object based on the file extension.
+        switch (extension) {
+          case "flr":
+            TimelineFlare flareAsset = TimelineFlare();
+            asset = flareAsset;
+            flare.FlutterActor actor = _flareResources[filename];
+            if (actor == null) {
+              actor = flare.FlutterActor();
+
+              /// Flare library function to load the [FlutterActor]
+              bool success = await actor.loadFromBundle(rootBundle, filename);
+              if (success) {
+                /// Populate the Map.
+                _flareResources[filename] = actor;
+              }
+            }
+            if (actor != null) {
+              /// Distinguish between the actual actor, and its intance.
+              flareAsset.actorStatic = actor.artboard;
+              flareAsset.actorStatic.initializeGraphics();
+              flareAsset.actor = actor.artboard.makeInstance();
+              flareAsset.actor.initializeGraphics();
+
+              /// and the reference to their first animation is grabbed.
+              flareAsset.animation = actor.artboard.animations[0];
+
+              dynamic name = assetMap["idle"];
+              if (name is String) {
+                if ((flareAsset.idle = flareAsset.actor.getAnimation(name)) !=
+                    null) {
+                  flareAsset.animation = flareAsset.idle;
+                }
+              } else if (name is List) {
+                for (String animationName in name) {
+                  flare.ActorAnimation animation =
+                      flareAsset.actor.getAnimation(animationName);
+                  if (animation != null) {
+                    if (flareAsset.idleAnimations == null) {
+                      flareAsset.idleAnimations = List<flare.ActorAnimation>();
+                    }
+                    flareAsset.idleAnimations.add(animation);
+                    flareAsset.animation = animation;
+                  }
+                }
+              }
+
+              name = assetMap["intro"];
+              if (name is String) {
+                if ((flareAsset.intro = flareAsset.actor.getAnimation(name)) !=
+                    null) {
+                  flareAsset.animation = flareAsset.intro;
+                }
+              }
+
+              /// Make sure that all the initial values are set for the actor and for the actor instance.
+              flareAsset.animationTime = 0.0;
+              flareAsset.actor.advance(0.0);
+              flareAsset.setupAABB = flareAsset.actor.computeAABB();
+              flareAsset.animation
+                  .apply(flareAsset.animationTime, flareAsset.actor, 1.0);
+              flareAsset.animation.apply(
+                  flareAsset.animation.duration, flareAsset.actorStatic, 1.0);
+              flareAsset.actor.advance(0.0);
+              flareAsset.actorStatic.advance(0.0);
+
+              dynamic loop = assetMap["loop"];
+              flareAsset.loop = loop is bool ? loop : true;
+              dynamic offset = assetMap["offset"];
+              flareAsset.offset = offset == null
+                  ? 0.0
+                  : offset is int
+                      ? offset.toDouble()
+                      : offset;
+              dynamic gap = assetMap["gap"];
+              flareAsset.gap = gap == null
+                  ? 0.0
+                  : gap is int
+                      ? gap.toDouble()
+                      : gap;
+
+              dynamic bounds = assetMap["bounds"];
+              if (bounds is List) {
+                /// Override the AABB for this entry with custom values.
+                flareAsset.setupAABB = flare.AABB.fromValues(
+                    bounds[0] is int ? bounds[0].toDouble() : bounds[0],
+                    bounds[1] is int ? bounds[1].toDouble() : bounds[1],
+                    bounds[2] is int ? bounds[2].toDouble() : bounds[2],
+                    bounds[3] is int ? bounds[3].toDouble() : bounds[3]);
+              }
+            }
+            break;
+          case "nma":
+            TimelineNima nimaAsset = TimelineNima();
+            asset = nimaAsset;
+            nima.FlutterActor actor = _nimaResources[filename];
+            if (actor == null) {
+              actor = nima.FlutterActor();
+
+              bool success = await actor.loadFromBundle(filename);
+              if (success) {
+                _nimaResources[filename] = actor;
+              }
+            }
+            if (actor != null) {
+              nimaAsset.actorStatic = actor;
+              nimaAsset.actor = actor.makeInstance();
+
+              dynamic name = assetMap["idle"];
+              if (name is String) {
+                nimaAsset.animation = nimaAsset.actor.getAnimation(name);
+              } else {
+                nimaAsset.animation = actor.animations[0];
+              }
+              nimaAsset.animationTime = 0.0;
+              nimaAsset.actor.advance(0.0);
+
+              nimaAsset.setupAABB = nimaAsset.actor.computeAABB();
+              nimaAsset.animation
+                  .apply(nimaAsset.animationTime, nimaAsset.actor, 1.0);
+              nimaAsset.animation.apply(
+                  nimaAsset.animation.duration, nimaAsset.actorStatic, 1.0);
+              nimaAsset.actor.advance(0.0);
+              nimaAsset.actorStatic.advance(0.0);
+              dynamic loop = assetMap["loop"];
+              nimaAsset.loop = loop is bool ? loop : true;
+              dynamic offset = assetMap["offset"];
+              nimaAsset.offset = offset == null
+                  ? 0.0
+                  : offset is int
+                      ? offset.toDouble()
+                      : offset;
+              dynamic gap = assetMap["gap"];
+              nimaAsset.gap = gap == null
+                  ? 0.0
+                  : gap is int
+                      ? gap.toDouble()
+                      : gap;
+              dynamic bounds = assetMap["bounds"];
+              if (bounds is List) {
+                nimaAsset.setupAABB = nima.AABB.fromValues(
+                    bounds[0] is int ? bounds[0].toDouble() : bounds[0],
+                    bounds[1] is int ? bounds[1].toDouble() : bounds[1],
+                    bounds[2] is int ? bounds[2].toDouble() : bounds[2],
+                    bounds[3] is int ? bounds[3].toDouble() : bounds[3]);
+              }
+            }
+            break;
+
+          default:
+
+            /// Legacy fallback case: some elements could have been just images.
+            TimelineImage imageAsset = TimelineImage();
+            asset = imageAsset;
+
+            ByteData data = await rootBundle.load(filename);
+            Uint8List list = Uint8List.view(data.buffer);
+            ui.Codec codec = await ui.instantiateImageCodec(list);
+            ui.FrameInfo frame = await codec.getNextFrame();
+            imageAsset.image = frame.image;
+
+            break;
+        }
+
+        double scale = 1.0;
+        if (assetMap.containsKey("scale")) {
+          dynamic s = assetMap["scale"];
+          scale = s is int ? s.toDouble() : s;
+        }
+
+        dynamic width = assetMap["width"];
+        asset.width = (width is int ? width.toDouble() : width) * scale;
+
+        dynamic height = assetMap["height"];
+        asset.height = (height is int ? height.toDouble() : height) * scale;
+        asset.entry = timelineEntry;
+        asset.filename = filename;
+        timelineEntry.asset = asset;
+      }
+
+      /// Add this entry to the list.
+      allEntries.add(timelineEntry);
     }
 
     /// 对完整列表进行排序，以使它们按照从旧到新的顺序排列
@@ -640,7 +643,8 @@ class Timeline {
 
     /// DEBUG，标记 TimelineEntryType
     allEntries.forEach((element) {
-      element.label = '${element.type.toString().split('.')[1]}\n${element.label}';
+      element.label =
+          '<${element.type.toString().split('.')[1]}>\n${element.label}';
     });
 
     _backgroundColors
@@ -656,49 +660,55 @@ class Timeline {
 
     /// 建立层次结构（将时代分为“跨越时代”，并将事件放入其所属的时代）。
     TimelineEntry previous; // 前一个 TimelineEntry
+    // 遍历全部条目
     for (TimelineEntry entry in allEntries) {
       // 找出最早与最晚
       if (entry.start < _timeMin) _timeMin = entry.start;
       if (entry.end > _timeMax) _timeMax = entry.end;
 
-      if (previous != null) previous.next = entry;
-
+      // 设置"前一个条目中的下一个条目"
+      if (previous != null) {
+        previous.next = entry;
+      }
       // 设置上一个 TimelineEntry
       entry.previous = previous;
 
       // 更新 TimelineEntry
       previous = entry;
 
+      // 父条目
       TimelineEntry parent;
 
       double minDistance = double.maxFinite;
 
       // 从远到近匹配 parent
       for (TimelineEntry checkEntry in allEntries) {
-        // 检查条目是否为 TimelineEntryType.Era 即时代，只有时代有资格作为 事件Parent
-        if (checkEntry.type == TimelineEntryType.Era) {
-          // 计算事件开始与时代开始日期之间的距离
-          double distance = entry.start - checkEntry.start;
-          double distanceEnd = entry.start - checkEntry.end;
+        // 检查条目是否为 TimelineEntryType.Era 即时代，只有时代有资格作为 Parent
+        if (checkEntry.type != TimelineEntryType.Era) continue;
 
-          // distance > 0 保证事件在时代开始日期之后
-          // distanceEnd < 0 TODO:...
-          // distance < minDistance 保证当前匹配到的时代晚于上次匹配到的时代
-          if (distance > 0 && distanceEnd < 0 && distance < minDistance) {
-            minDistance = distance;
-            parent = checkEntry;
-          }
+        // 计算事件开始与时代开始日期之间的距离
+        double distance = entry.start - checkEntry.start;
+        // TODO: ?
+        double distanceEnd = entry.start - checkEntry.end;
+
+        // distance > 0 保证事件在时代开始日期之后
+        // distanceEnd < 0 TODO: ?...
+        // distance < minDistance 保证当前匹配到的 parent 晚于上次匹配到的 parent
+        if (distance > 0 && distanceEnd < 0 && distance < minDistance) {
+          minDistance = distance;
+          parent = checkEntry;
         }
       }
 
       if (parent != null) {
         entry.parent = parent;
+        // 设置 父条目的孩子
         if (parent.children == null) {
           parent.children = List<TimelineEntry>();
         }
         parent.children.add(entry);
       } else {
-        /// 没有父母，所以这是一个根条目。
+        // 没有父母，所以这是一个根条目。
         _entries.add(entry);
       }
     }
@@ -752,18 +762,23 @@ class Timeline {
   /// 此方法根据当前的开始和结束位置来限制当前视口。
   void setViewport({
     // 时间线起始位置
-    var start = double.maxFinite,
+    double start = double.maxFinite,
     // 时间线结束位置
-    var end = double.maxFinite,
-    var height = double.maxFinite,
-    // 是否设置 padding 值
-    var pad = false,
-    var velocity = double.maxFinite,
+    double end = double.maxFinite,
+    // 传入设备高度 (TimeLine Widget 高度)
+    double height = double.maxFinite,
+    // 是否设置 padding 值, 距离顶部的 padding 值
+    bool pad = false,
+    // 动画速度（滚动） ?
+    double velocity = double.maxFinite,
     // 此操作是否使用动画
-    var animate = false,
+    bool animate = false,
   }) {
+    print('---setViewport');
+
     /// 计算当前高度
     if (height != double.maxFinite) {
+      // 检查 height 和 条目数量，不允许途中更改 _height
       if (_height == 0.0 && _entries != null && _entries.length > 0) {
         double scale = height / (_end - _start);
         _start = _start - padding.top / scale;
@@ -772,7 +787,7 @@ class Timeline {
       _height = height;
     }
 
-    /// 如果提供了 start&end 的值，请相应地评估当前视口的 顶部/底部 位置。 否则，请分别构建值。
+    /// 如果提供了 start & end 的值，请相应地评估当前视口的 顶部/底部 位置。 否则，请分别构建值。
     if (start != double.maxFinite && end != double.maxFinite) {
       _start = start;
       _end = end;
@@ -792,8 +807,7 @@ class Timeline {
       }
     }
 
-    /// If a velocity value has been passed, use the [ScrollPhysics] to create
-    /// a simulation and perform scrolling natively to the current platform.
+    /// 如果已经传递了速度值，请使用 [ScrollPhysics] 创建一个模拟并在本机上滚动到当前平台。
     if (velocity != double.maxFinite) {
       double scale = computeScale(_start, _end);
       double padTop =
@@ -812,6 +826,7 @@ class Timeline {
       } else {
         _scrollPhysics = ClampingScrollPhysics();
       }
+
       _scrollMetrics = FixedScrollMetrics(
           minScrollExtent: double.negativeInfinity,
           maxScrollExtent: double.infinity,
