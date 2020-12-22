@@ -106,6 +106,7 @@ class _MainMenuWidgetState extends State<MainMenuWidget> {
     });
   }
 
+  @override
   initState() {
     super.initState();
 
@@ -114,7 +115,9 @@ class _MainMenuWidgetState extends State<MainMenuWidget> {
     /// such as labels, background colors, the background Flare animation asset,
     /// and for each element in the expanded card, the relative position on the [Timeline]. 
     _menu.loadFromBundle("assets/menu.json").then((bool success) {
-      if (success) setState(() {}); // Load the menu.
+      if (success) setState(() {
+
+      }); // Load the menu.
     });
 
     _searchTextController.addListener(() {

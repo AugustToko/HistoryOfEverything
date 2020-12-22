@@ -66,6 +66,7 @@ class Timeline {
   double _renderStart;
   double _renderEnd;
   double _lastFrameTime = 0.0;
+
   /// [TimelineWidget] 高度
   double _height = 0.0;
   double _firstOnScreenEntryY = 0.0;
@@ -108,6 +109,11 @@ class Timeline {
   /// 使得长按的气泡将漂浮到视口的顶部，并设置 padding，让气泡距离顶部有一段距离
   /// 见 [TimeLime.padding.png]
   EdgeInsets padding = EdgeInsets.zero;
+
+  /// dart
+  /// ```
+  /// MediaQuery.of(context).padding
+  /// ```
   EdgeInsets devicePadding = EdgeInsets.zero;
 
   Timer _steadyTimer;
@@ -842,9 +848,7 @@ class Timeline {
       _renderStart = start;
       _renderEnd = end;
       advance(0.0, false);
-      if (onNeedPaint != null) {
-        onNeedPaint();
-      }
+      onNeedPaint?.call();
     } else if (!_isFrameScheduled) {
       _isFrameScheduled = true;
       _lastFrameTime = 0.0;
@@ -873,9 +877,7 @@ class Timeline {
       SchedulerBinding.instance.scheduleFrameCallback(beginFrame);
     }
 
-    if (onNeedPaint != null) {
-      onNeedPaint();
-    }
+      onNeedPaint?.call();
   }
 
   TickColors findTickColors(double screen) {

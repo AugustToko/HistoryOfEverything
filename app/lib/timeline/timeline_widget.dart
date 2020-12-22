@@ -30,7 +30,11 @@ class TimelineWidget extends StatefulWidget {
 
 class _TimelineWidgetState extends State<TimelineWidget> {
   static const String DefaultEraName = "Birth of the Universe";
-  static const double TopOverlap = 56.0;
+
+  static const double TopOverlap = kToolbarHeight;
+
+  /// 语法糖获取器
+  Timeline get timeline => widget.timeline;
 
   /// 如 [_scaleStart]，[_ scaleUpdate]，[_ scaleEnd]中所述，在执行缩放操作时，
   /// 这些变量用于计算时间轴的正确视口。
@@ -38,15 +42,13 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   double _scaleStartYearStart = -100.0;
   double _scaleStartYearEnd = 100.0;
 
-  /// 当触摸[Timeline]上的气泡时，请跟踪已触摸哪个元素以便移至 [article_widget]。
+  /// 当触摸 [Timeline] 上的气泡时，请跟踪已触摸哪个元素以便移至 [article_widget]。
   TapTarget _touchedBubble;
   TimelineEntry _touchedEntry;
 
-  /// 时间轴目前关注哪个时代。 默认为 [DefaultEraName]。
+  /// 时间轴目前关注哪个时代 。 默认为 [DefaultEraName]。
+  /// [TimelineEntryType]
   String _eraName;
-
-  /// 语法糖获取器
-  Timeline get timeline => widget.timeline;
 
   Color _headerTextColor;
   Color _headerBackgroundColor;
@@ -57,7 +59,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   /// 以下三个函数定义为
   /// [GestureDetector]小部件在呈现此小部件时。
   /// 首先收集有关缩放操作起点的信息。
-  /// 然后根据传入的[ ScaleUpdateDetails] 数据执行更新，并将相关信息传递到 [Timeline]，
+  /// 然后根据传入的 [ScaleUpdateDetails] 数据执行更新，并将相关信息传递到 [Timeline]，
   /// 以便它可以正确显示所有相关信息。
   void _scaleStart(ScaleStartDetails details) {
     _lastFocalPoint = details.focalPoint;
@@ -75,12 +77,17 @@ class _TimelineWidgetState extends State<TimelineWidget> {
     double focus = _scaleStartYearStart + details.focalPoint.dy * scale;
     double focalDiff =
         (_scaleStartYearStart + _lastFocalPoint.dy * scale) - focus;
-    timeline.setViewport(start: focus + (_scaleStartYearStart - focus) / changeScale + focalDiff, end: focus + (_scaleStartYearEnd - focus) / changeScale + focalDiff, height: context.size.height, animate: true);
+    timeline.setViewport(
+        start: focus + (_scaleStartYearStart - focus) / changeScale + focalDiff,
+        end: focus + (_scaleStartYearEnd - focus) / changeScale + focalDiff,
+        height: context.size.height,
+        animate: true);
   }
 
   void _scaleEnd(ScaleEndDetails details) {
     timeline.isInteracting = false;
-    timeline.setViewport(velocity: details.velocity.pixelsPerSecond.dy, animate: true);
+    timeline.setViewport(
+        velocity: details.velocity.pixelsPerSecond.dy, animate: true);
   }
 
   ///以下两个回调传递给 [TimelineRenderWidget]，因此可以将信息传递回此小部件。
@@ -123,16 +130,17 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                 Timeline.Parallax,
             bottom: target.padBottom);
 
-        timeline.setViewport(start: target.start, end: target.end, animate: true, pad: true);
+        timeline.setViewport(
+            start: target.start, end: target.end, animate: true, pad: true);
       } else {
-        widget.timeline.isActive = false;
+        timeline.isActive = false;
 
         // 非缩放操作，进入相应的条目页面
         Navigator.of(context)
             .push(MaterialPageRoute(
                 builder: (context) =>
                     ArticleWidget(article: _touchedBubble.entry)))
-            .then((v) => widget.timeline.isActive = true);
+            .then((v) => timeline.isActive = true);
       }
     } else if (_touchedEntry != null) {
       MenuItemData target = MenuItemData.fromEntry(_touchedEntry);
@@ -143,7 +151,8 @@ class _TimelineWidgetState extends State<TimelineWidget> {
               target.padTop +
               Timeline.Parallax,
           bottom: target.padBottom);
-      timeline.setViewport(start: target.start, end: target.end, animate: true, pad: true);
+      timeline.setViewport(
+          start: target.start, end: target.end, animate: true, pad: true);
     }
   }
 
@@ -162,7 +171,8 @@ class _TimelineWidgetState extends State<TimelineWidget> {
               Timeline.Parallax,
           bottom: target.padBottom);
 
-      timeline.setViewport(start: target.start, end: target.end, animate: true, pad: true);
+      timeline.setViewport(
+          start: target.start, end: target.end, animate: true, pad: true);
     }
   }
 
@@ -171,7 +181,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
     super.initState();
     if (timeline != null) {
       // 设置激活标签
-      widget.timeline.isActive = true;
+      timeline.isActive = true;
       // 设置是代名称
       _eraName = timeline.currentEra != null
           ? timeline.currentEra.label
@@ -248,7 +258,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   /// -[BackdropFilter]，它包装顶部标题栏，并带有“后退”按钮，“收藏夹”按钮及其颜色。
   @override
   Widget build(BuildContext context) {
-    print('------------DEVICE HEIGHT------------');
+    print('------------DEVICE HEIGHT(_TimelineWidgetState)------------');
     print(MediaQuery.of(context).size.height);
 
     if (timeline == null) return const SizedBox();
@@ -267,12 +277,13 @@ class _TimelineWidgetState extends State<TimelineWidget> {
           onTapUp: _tapUp,
           child: Stack(children: <Widget>[
             TimelineRenderWidget(
-                timeline: timeline,
-                favorites: BlocProvider.favorites(context).favorites,
-                topOverlap: TopOverlap + devicePadding.top,
-                focusItem: widget.focusItem,
-                touchBubble: onTouchBubble,
-                touchEntry: onTouchEntry),
+              timeline: timeline,
+              favorites: BlocProvider.favorites(context).favorites,
+              topOverlap: TopOverlap + devicePadding.top,
+              focusItem: widget.focusItem,
+              touchBubble: onTouchBubble,
+              touchEntry: onTouchEntry,
+            ),
             Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -299,7 +310,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                               alignment: Alignment.centerLeft,
                               icon: Icon(Icons.arrow_back),
                               onPressed: () {
-                                widget.timeline.isActive = false;
+                                timeline.isActive = false;
                                 Navigator.pop(context);
                                 return true;
                               },

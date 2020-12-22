@@ -15,16 +15,16 @@ import 'package:timeline/timeline/ticks.dart';
 import 'package:timeline/timeline/timeline.dart';
 import 'package:timeline/timeline/timeline_entry.dart';
 import 'package:timeline/timeline/timeline_utils.dart';
+import 'package:timeline/bloc_provider.dart';
 
 /// These two callbacks are used to detect if a bubble or an entry have been tapped.
 /// If that's the case, [ArticlePage] will be pushed onto the [Navigator] stack.
 typedef TouchBubbleCallback(TapTarget bubble);
 typedef TouchEntryCallback(TimelineEntry entry);
 
-/// This couples with [TimelineRenderObject].
+/// 这与[TimelineRenderObject]耦合。
 ///
-/// This widget's fields are accessible from the [RenderBox] so that it can
-/// be aligned with the current state.
+/// 这个小部件的字段可以从[RenderBox]访问，因此它可以与当前状态对齐。
 class TimelineRenderWidget extends LeafRenderObjectWidget {
   final double topOverlap;
   final Timeline timeline;
@@ -84,19 +84,25 @@ class TimelineRenderObject extends RenderBox {
     Color.fromARGB(255, 128, 28, 15)
   ];
 
-  /// [Ticks] 距离顶部的位置 ([AppBar] 宽度)
-  double _topOverlap = 0.0;
-  Ticks _ticks = Ticks();
-  Timeline _timeline;
-  MenuItemData _focusItem;
-  MenuItemData _processedFocusItem;
-  List<TapTarget> _tapTargets = List<TapTarget>();
-  List<TimelineEntry> _favorites;
   TouchBubbleCallback touchBubble;
   TouchEntryCallback touchEntry;
 
-  @override
-  bool get sizedByParent => true;
+  final _ticks = Ticks();
+
+  final _tapTargets = List<TapTarget>();
+
+  MenuItemData _processedFocusItem;
+
+  /// [Ticks] 距离设备顶部的高度，一般为 kToolbarHeight + MediaQuery.of(context).padding.top
+  /// [kToolbarHeight]
+  /// [MediaQueryData.padding]
+  double _topOverlap = 0.0;
+  Timeline _timeline;
+
+  /// 喜爱的条目
+  /// [BlocProvider.favorites]
+  List<TimelineEntry> _favorites;
+  MenuItemData _focusItem;
 
   double get topOverlap => _topOverlap;
 
@@ -145,6 +151,9 @@ class TimelineRenderObject extends RenderBox {
     updateFocusItem();
   }
 
+  @override
+  bool get sizedByParent => true;
+
   /// 如果 [_focusItem] 已更新为新值，请更新当前视图。
   void updateFocusItem() {
     if (_processedFocusItem == _focusItem) {
@@ -155,18 +164,21 @@ class TimelineRenderObject extends RenderBox {
       return;
     }
 
-    print('setViewport by updateFocusItem');
-
     /// 调整当前的时间轴填充，从而调整视口。
     if (_focusItem.pad) {
       timeline.padding = EdgeInsets.only(
           top: topOverlap + _focusItem.padTop + Timeline.Parallax,
           bottom: _focusItem.padBottom);
 
-      timeline.setViewport(start: _focusItem.start, end: _focusItem.end, animate: true, pad: true);
+      timeline.setViewport(
+          start: _focusItem.start,
+          end: _focusItem.end,
+          animate: true,
+          pad: true);
     } else {
       timeline.padding = EdgeInsets.zero;
-      timeline.setViewport(start: _focusItem.start, end: _focusItem.end, animate: true);
+      timeline.setViewport(
+          start: _focusItem.start, end: _focusItem.end, animate: true);
     }
     _processedFocusItem = _focusItem;
   }
@@ -229,8 +241,7 @@ class TimelineRenderObject extends RenderBox {
       final colors = <ui.Color>[];
       final stops = <double>[];
 
-      final s =
-          timeline.computeScale(timeline.renderStart, timeline.renderEnd);
+      final s = timeline.computeScale(timeline.renderStart, timeline.renderEnd);
 
       final y1 = (rangeStart - renderStart) * s;
       final y2 = (rangeEnd - renderStart) * s;
@@ -494,9 +505,10 @@ class TimelineRenderObject extends RenderBox {
 
     /// 在屏幕左侧绘制 [Ticks]。
     canvas.save();
+
     /// 限制 Ticks 绘制于 AppBar 之下
-    canvas.clipRect(Rect.fromLTWH(
-        offset.dx, offset.dy + topOverlap, size.width, size.height - topOverlap));
+    canvas.clipRect(Rect.fromLTWH(offset.dx, offset.dy + topOverlap, size.width,
+        size.height - topOverlap));
 
     _ticks.paint(
         context, offset, -renderStart * scale, scale, size.height, timeline);

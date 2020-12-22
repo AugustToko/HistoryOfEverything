@@ -68,6 +68,7 @@ class TimelineFlare extends TimelineAnimatedAsset {
 enum TimelineEntryType {
   // 时代
   Era,
+
   // 事件
   Incident,
 }
@@ -83,7 +84,6 @@ class TimelineEntry {
   /// Used to calculate how many lines to draw for the bubble in the timeline.
   int lineCount = 1;
 
-  ///
   String _label;
   String articleFilename;
   String id;
