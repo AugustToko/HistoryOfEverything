@@ -1,11 +1,11 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=E:\flutter"
-export "FLUTTER_APPLICATION_PATH=D:\flutter projects\HistoryOfEverything\app"
+export "FLUTTER_ROOT=C:\sdk\flutter"
+export "FLUTTER_APPLICATION_PATH=C:\Users\chenlongcould\AndroidStudioProjects\HistoryOfEverything\app"
+export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_TARGET=lib\main.dart"
 export "FLUTTER_BUILD_DIR=build"
 export "SYMROOT=${SOURCE_ROOT}/../build\ios"
-export "OTHER_LDFLAGS=$(inherited) -framework Flutter"
 export "FLUTTER_BUILD_NAME=1.0.1"
 export "FLUTTER_BUILD_NUMBER=19"
 export "DART_OBFUSCATION=false"

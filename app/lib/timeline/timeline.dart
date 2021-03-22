@@ -60,6 +60,10 @@ class Timeline {
   /// [ScrollPhysics] based on the platform we're on.
   final TargetPlatform _platform;
 
+  Timeline(this._platform) {
+    setViewport(start: 1536.0, end: 3072.0);
+  }
+
   /// 用于标记视口开始与结束位置
   double _start = 0.0; // 视口开始
   double _end = 0.0; //视口结束
@@ -159,11 +163,6 @@ class Timeline {
   ChangeEraCallback onEraChanged;
 
   ChangeHeaderColorCallback onHeaderColorsChanged;
-
-  Timeline(this._platform) {
-    print('------------setViewport by Timeline(this._platform)');
-    setViewport(start: 1536.0, end: 3072.0);
-  }
 
   double get renderOffsetDepth => _renderOffsetDepth;
 
@@ -276,6 +275,38 @@ class Timeline {
       _lastFrameTime = 0.0;
       SchedulerBinding.instance.scheduleFrameCallback(beginFrame);
     }
+  }
+
+  /// Make sure that all the visible assets are being rendered and advanced
+  /// according to the current state of the timeline.
+  ///
+  /// 确保已根据时间轴的当前状态渲染和推进所有可见资产。
+  void beginFrame(Duration timeStamp) {
+    _isFrameScheduled = false;
+
+    final double t =
+        timeStamp.inMicroseconds / Duration.microsecondsPerMillisecond / 1000.0;
+
+    if (_lastFrameTime == 0.0) {
+      _lastFrameTime = t;
+      _isFrameScheduled = true;
+      SchedulerBinding.instance.scheduleFrameCallback(beginFrame);
+      return;
+    }
+
+    double elapsed = t - _lastFrameTime;
+
+    print(
+        'beginFrame: {t: ${t.toStringAsPrecision(4)}, lastFrameTime: ${_lastFrameTime.toStringAsPrecision(4)}, elapsed: ${elapsed.toStringAsPrecision(4)}');
+
+    _lastFrameTime = t;
+
+    if (!_advance(elapsed, true) && !_isFrameScheduled) {
+      _isFrameScheduled = true;
+      SchedulerBinding.instance.scheduleFrameCallback(beginFrame);
+    }
+
+    onNeedPaint?.call();
   }
 
   double screenPaddingInTime(double padding, double start, double end) {
@@ -633,6 +664,7 @@ class Timeline {
 
         dynamic height = assetMap["height"];
         asset.height = (height is int ? height.toDouble() : height) * scale;
+
         asset.entry = timelineEntry;
         asset.filename = filename;
         timelineEntry.asset = asset;
@@ -710,7 +742,7 @@ class Timeline {
         entry.parent = parent;
         // 设置 父条目的孩子
         if (parent.children == null) {
-          parent.children = List<TimelineEntry>();
+          parent.children = <TimelineEntry>[];
         }
         parent.children.add(entry);
       } else {
@@ -765,6 +797,10 @@ class Timeline {
   //   }
   // }
 
+  /// 1. App 启动时创建 [Timeline]
+  ///   构造方法调用 [setViewport] 传入 [start] [end]，初始化 [_start] [_end] [_renderStart] [_renderEnd]，并推进时间轴到 0 位置。
+  ///
+  ///
   /// 此方法根据当前的开始和结束位置来限制当前视口。
   void setViewport({
     // 时间线起始位置
@@ -780,7 +816,8 @@ class Timeline {
     // 此操作是否使用动画
     bool animate = false,
   }) {
-    print('---setViewport');
+    print(
+        'timeline#setViewport#{start: $start, end: $end, height: $height, pad: $pad, velocity: $velocity, animate: $animate}');
 
     /// 计算当前高度
     if (height != double.maxFinite) {
@@ -847,7 +884,7 @@ class Timeline {
     if (!animate) {
       _renderStart = start;
       _renderEnd = end;
-      advance(0.0, false);
+      _advance(0.0, false);
       onNeedPaint?.call();
     } else if (!_isFrameScheduled) {
       _isFrameScheduled = true;
@@ -856,67 +893,14 @@ class Timeline {
     }
   }
 
-  /// Make sure that all the visible assets are being rendered and advanced
-  /// according to the current state of the timeline.
-  void beginFrame(Duration timeStamp) {
-    _isFrameScheduled = false;
-    final double t =
-        timeStamp.inMicroseconds / Duration.microsecondsPerMillisecond / 1000.0;
-    if (_lastFrameTime == 0.0) {
-      _lastFrameTime = t;
-      _isFrameScheduled = true;
-      SchedulerBinding.instance.scheduleFrameCallback(beginFrame);
-      return;
-    }
-
-    double elapsed = t - _lastFrameTime;
-    _lastFrameTime = t;
-
-    if (!advance(elapsed, true) && !_isFrameScheduled) {
-      _isFrameScheduled = true;
-      SchedulerBinding.instance.scheduleFrameCallback(beginFrame);
-    }
-
-      onNeedPaint?.call();
-  }
-
-  TickColors findTickColors(double screen) {
-    if (_tickColors == null) {
-      return null;
-    }
-    for (TickColors color in _tickColors.reversed) {
-      if (screen >= color.screenY) {
-        return color;
-      }
-    }
-
-    return screen < _tickColors.first.screenY
-        ? _tickColors.first
-        : _tickColors.last;
-  }
-
-  HeaderColors _findHeaderColors(double screen) {
-    if (_headerColors == null) {
-      return null;
-    }
-    for (HeaderColors color in _headerColors.reversed) {
-      if (screen >= color.screenY) {
-        return color;
-      }
-    }
-
-    return screen < _headerColors.first.screenY
-        ? _headerColors.first
-        : _headerColors.last;
-  }
-
-  bool advance(double elapsed, bool animate) {
+  /// See [beginFrame]
+  bool _advance(double elapsed, bool animate) {
     if (_height <= 0) {
-      /// Done rendering. Need to wait for height.
+      /// 完成渲染，需要 _height
       return true;
     }
 
-    /// The current scale based on the rendering area.
+    /// 基于渲染区域的当前比例。
     double scale = _height / (_renderEnd - _renderStart);
 
     bool doneRendering = true;
@@ -995,36 +979,36 @@ class Timeline {
       }
     }
 
-    _currentHeaderColors = _findHeaderColors(0.0);
-
-    if (_currentHeaderColors != null) {
-      if (_headerTextColor == null) {
-        _headerTextColor = _currentHeaderColors.text;
-        _headerBackgroundColor = _currentHeaderColors.background;
-      } else {
-        bool stillColoring = false;
-        Color headerTextColor = interpolateColor(
-            _headerTextColor, _currentHeaderColors.text, elapsed);
-
-        if (headerTextColor != _headerTextColor) {
-          _headerTextColor = headerTextColor;
-          stillColoring = true;
-          doneRendering = false;
-        }
-        Color headerBackgroundColor = interpolateColor(
-            _headerBackgroundColor, _currentHeaderColors.background, elapsed);
-        if (headerBackgroundColor != _headerBackgroundColor) {
-          _headerBackgroundColor = headerBackgroundColor;
-          stillColoring = true;
-          doneRendering = false;
-        }
-        if (stillColoring) {
-          if (onHeaderColorsChanged != null) {
-            onHeaderColorsChanged(_headerBackgroundColor, _headerTextColor);
-          }
-        }
-      }
-    }
+    // _currentHeaderColors = _findHeaderColors(0.0);
+    //
+    // if (_currentHeaderColors != null) {
+    //   if (_headerTextColor == null) {
+    //     _headerTextColor = _currentHeaderColors.text;
+    //     _headerBackgroundColor = _currentHeaderColors.background;
+    //   } else {
+    //     bool stillColoring = false;
+    //     Color headerTextColor = interpolateColor(
+    //         _headerTextColor, _currentHeaderColors.text, elapsed);
+    //
+    //     if (headerTextColor != _headerTextColor) {
+    //       _headerTextColor = headerTextColor;
+    //       stillColoring = true;
+    //       doneRendering = false;
+    //     }
+    //     Color headerBackgroundColor = interpolateColor(
+    //         _headerBackgroundColor, _currentHeaderColors.background, elapsed);
+    //     if (headerBackgroundColor != _headerBackgroundColor) {
+    //       _headerBackgroundColor = headerBackgroundColor;
+    //       stillColoring = true;
+    //       doneRendering = false;
+    //     }
+    //     if (stillColoring) {
+    //       if (onHeaderColorsChanged != null) {
+    //         onHeaderColorsChanged(_headerBackgroundColor, _headerTextColor);
+    //       }
+    //     }
+    //   }
+    // }
 
     /// Check all the visible entries and use the helper function [advanceItems()]
     /// to align their state with the elapsed time.
@@ -1046,7 +1030,7 @@ class Timeline {
       }
 
       /// Advance all the assets and add the rendered ones into [_renderAssets].
-      _renderAssets = List<TimelineAsset>();
+      _renderAssets = [];
       if (_advanceAssets(_entries, elapsed, animate, _renderAssets)) {
         doneRendering = false;
       }
@@ -1121,6 +1105,36 @@ class Timeline {
     }
 
     return doneRendering;
+  }
+
+  TickColors findTickColors(double screen) {
+    if (_tickColors == null) {
+      return null;
+    }
+    for (TickColors color in _tickColors.reversed) {
+      if (screen >= color.screenY) {
+        return color;
+      }
+    }
+
+    return screen < _tickColors.first.screenY
+        ? _tickColors.first
+        : _tickColors.last;
+  }
+
+  HeaderColors _findHeaderColors(double screen) {
+    if (_headerColors == null) {
+      return null;
+    }
+    for (HeaderColors color in _headerColors.reversed) {
+      if (screen >= color.screenY) {
+        return color;
+      }
+    }
+
+    return screen < _headerColors.first.screenY
+        ? _headerColors.first
+        : _headerColors.last;
   }
 
   double bubbleHeight(TimelineEntry entry) {

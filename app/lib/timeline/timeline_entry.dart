@@ -10,36 +10,40 @@ import 'package:nima/nima/animation/actor_animation.dart' as nima;
 import 'package:nima/nima/math/aabb.dart' as nima;
 import 'package:timeline/timeline/timeline.dart';
 
-/// An object representing the renderable assets loaded from `timeline.json`.
+/// 表示从 timeline.json 加载的可渲染资产的对象。
 ///
-/// Each [TimelineAsset] encapsulates all the relevant properties for drawing,
-/// as well as maintaining a reference to its original [TimelineEntry].
-class TimelineAsset {
+/// 每个[TimelineAsset]都封装了所有相关的绘制属性，并维护了对其原始[TimelineEntry]的引用。
+abstract class TimelineAsset {
+  String filename;
+
+  // 控制图片（资源）宽度
   double width;
+  // 控制图片（资源）高度
   double height;
+
   double opacity = 0.0;
   double scale = 0.0;
   double scaleVelocity = 0.0;
+
   double y = 0.0;
   double velocity = 0.0;
-  String filename;
   TimelineEntry entry;
 }
 
-/// A renderable image.
-class TimelineImage extends TimelineAsset {
-  ui.Image image;
-}
-
-/// This asset also has information regarding its animations.
-class TimelineAnimatedAsset extends TimelineAsset {
+/// 该资产还具有有关其动画的信息。
+abstract class TimelineAnimatedAsset extends TimelineAsset {
   bool loop;
   double animationTime = 0.0;
   double offset = 0.0;
   double gap = 0.0;
 }
 
-/// An `Nima` Asset.
+/// 可渲染的图像。
+class TimelineImage extends TimelineAsset {
+  ui.Image image;
+}
+
+/// 尼玛（Nima）资产。
 class TimelineNima extends TimelineAnimatedAsset {
   nima.FlutterActor actorStatic;
   nima.FlutterActor actor;
@@ -73,15 +77,14 @@ enum TimelineEntryType {
   Incident,
 }
 
-/// Each entry in the timeline is represented by an instance of this object.
-/// Each favorite, search result and detail page will grab the information from a reference
-/// to this object.
+/// 时间轴中的每个条目都由该对象的一个实例表示。
+/// 每个收藏夹，搜索结果和详细信息页面都将从对该对象的引用中获取信息。
 ///
-/// They are all initialized at startup time by the [BlocProvider] constructor.
+/// 它们都在启动时由 [BlocProvider] 构造函数初始化。
 class TimelineEntry {
   TimelineEntryType type;
 
-  /// Used to calculate how many lines to draw for the bubble in the timeline.
+  /// 用于计算在时间轴中为气泡绘制多少条线。
   int lineCount = 1;
 
   String _label;

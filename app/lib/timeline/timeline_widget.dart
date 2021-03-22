@@ -77,28 +77,23 @@ class _TimelineWidgetState extends State<TimelineWidget> {
     double focus = _scaleStartYearStart + details.focalPoint.dy * scale;
     double focalDiff =
         (_scaleStartYearStart + _lastFocalPoint.dy * scale) - focus;
-    timeline.setViewport(
-        start: focus + (_scaleStartYearStart - focus) / changeScale + focalDiff,
-        end: focus + (_scaleStartYearEnd - focus) / changeScale + focalDiff,
-        height: context.size.height,
-        animate: true);
+    timeline.setViewport(start: focus + (_scaleStartYearStart - focus) / changeScale + focalDiff, end: focus + (_scaleStartYearEnd - focus) / changeScale + focalDiff, height: context.size.height, animate: true);
   }
 
   void _scaleEnd(ScaleEndDetails details) {
     timeline.isInteracting = false;
-    timeline.setViewport(
-        velocity: details.velocity.pixelsPerSecond.dy, animate: true);
+    timeline.setViewport(velocity: details.velocity.pixelsPerSecond.dy, animate: true);
   }
 
   ///以下两个回调传递给 [TimelineRenderWidget]，因此可以将信息传递回此小部件。
-  onTouchBubble(TapTarget bubble) {
+  void onTouchBubble(TapTarget bubble) {
     _touchedBubble = bubble;
     // print('----------------onTouchBubble: ${bubble == null ? 'is null' : 'is not null'}');
     // print('${bubble?.entry?.articleFilename}');
   }
 
   /// 触发方式 ？
-  onTouchEntry(TimelineEntry entry) {
+  void onTouchEntry(TimelineEntry entry) {
     _touchedEntry = entry;
     // print('----------------onTouchEntry ${entry == null ? 'is null' : 'is not null'}');
     // print('${entry?.articleFilename}');
@@ -130,8 +125,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
                 Timeline.Parallax,
             bottom: target.padBottom);
 
-        timeline.setViewport(
-            start: target.start, end: target.end, animate: true, pad: true);
+        timeline.setViewport(start: target.start, end: target.end, animate: true, pad: true);
       } else {
         timeline.isActive = false;
 
@@ -151,8 +145,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
               target.padTop +
               Timeline.Parallax,
           bottom: target.padBottom);
-      timeline.setViewport(
-          start: target.start, end: target.end, animate: true, pad: true);
+      timeline.setViewport(start: target.start, end: target.end, animate: true, pad: true);
     }
   }
 
@@ -171,8 +164,7 @@ class _TimelineWidgetState extends State<TimelineWidget> {
               Timeline.Parallax,
           bottom: target.padBottom);
 
-      timeline.setViewport(
-          start: target.start, end: target.end, animate: true, pad: true);
+      timeline.setViewport(start: target.start, end: target.end, animate: true, pad: true);
     }
   }
 
@@ -258,24 +250,27 @@ class _TimelineWidgetState extends State<TimelineWidget> {
   /// -[BackdropFilter]，它包装顶部标题栏，并带有“后退”按钮，“收藏夹”按钮及其颜色。
   @override
   Widget build(BuildContext context) {
-    print('------------DEVICE HEIGHT(_TimelineWidgetState)------------');
+    print('------------DEVICE HEIGHT(_TimelineWidgetState#build)------------');
     print(MediaQuery.of(context).size.height);
 
     if (timeline == null) return const SizedBox();
 
-    EdgeInsets devicePadding = MediaQuery.of(context).padding;
+    final devicePadding = MediaQuery.of(context).padding;
     timeline.devicePadding = devicePadding;
 
     return Scaffold(
       backgroundColor: Colors.greenAccent,
+      // 时间线手势操作回调
       body: GestureDetector(
-          onLongPress: _longPress,
-          onTapDown: _tapDown,
-          onScaleStart: _scaleStart,
-          onScaleUpdate: _scaleUpdate,
-          onScaleEnd: _scaleEnd,
-          onTapUp: _tapUp,
-          child: Stack(children: <Widget>[
+        onLongPress: _longPress,
+        onTapDown: _tapDown,
+        onScaleStart: _scaleStart,
+        onScaleUpdate: _scaleUpdate,
+        onScaleEnd: _scaleEnd,
+        onTapUp: _tapUp,
+        child: Stack(
+          children: <Widget>[
+            // 时间线主体
             TimelineRenderWidget(
               timeline: timeline,
               favorites: BlocProvider.favorites(context).favorites,
@@ -284,76 +279,80 @@ class _TimelineWidgetState extends State<TimelineWidget> {
               touchBubble: onTouchBubble,
               touchEntry: onTouchEntry,
             ),
+            // TOOL BAR
             Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Container(
-                      height: devicePadding.top,
-                      color: _headerBackgroundColor != null
-                          ? _headerBackgroundColor
-                          : Color.fromRGBO(238, 240, 242, 0.81)),
-                  Container(
-                      color: _headerBackgroundColor != null
-                          ? _headerBackgroundColor
-                          : Color.fromRGBO(238, 240, 242, 0.81),
-                      height: 56.0,
-                      width: double.infinity,
-                      child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: <Widget>[
-                            // 返回按钮
-                            IconButton(
-                              padding: EdgeInsets.only(left: 20.0, right: 20.0),
-                              color: _headerTextColor != null
-                                  ? _headerTextColor
-                                  : Colors.black.withOpacity(0.5),
-                              alignment: Alignment.centerLeft,
-                              icon: Icon(Icons.arrow_back),
-                              onPressed: () {
-                                timeline.isActive = false;
-                                Navigator.pop(context);
-                                return true;
-                              },
-                            ),
-                            // appbar title
-                            Text(
-                              _eraName,
-                              textAlign: TextAlign.left,
-                              style: TextStyle(
-                                  fontFamily: "RobotoMedium",
-                                  fontSize: 20.0,
-                                  color: _headerTextColor != null
-                                      ? _headerTextColor
-                                      : darkText.withOpacity(
-                                          darkText.opacity * 0.75)),
-                            ),
-                            const Spacer(),
-                            // 收藏按钮
-                            GestureDetector(
-                                child: Container(
-                                  height: 60.0,
-                                  width: 60.0,
-                                  padding: EdgeInsets.all(18.0),
-                                  color: Colors.white.withOpacity(0.0),
-                                  child: FlareActor("assets/heart_toolbar.flr",
-                                      animation: _showFavorites ? "On" : "Off",
-                                      shouldClip: false,
-                                      color: _headerTextColor != null
-                                          ? _headerTextColor
-                                          : darkText.withOpacity(
-                                              darkText.opacity * 0.75),
-                                      alignment: Alignment.centerRight),
-                                ),
-                                onTap: () {
-                                  timeline.showFavorites =
-                                      !timeline.showFavorites;
-                                  setState(() {
-                                    _showFavorites = timeline.showFavorites;
-                                  });
-                                }),
-                          ]))
-                ])
-          ])),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                    height: devicePadding.top,
+                    color: _headerBackgroundColor != null
+                        ? _headerBackgroundColor
+                        : Color.fromRGBO(238, 240, 242, 0.81)),
+                Container(
+                    color: _headerBackgroundColor != null
+                        ? _headerBackgroundColor
+                        : Color.fromRGBO(238, 240, 242, 0.81),
+                    height: 56.0,
+                    width: double.infinity,
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          // 返回按钮
+                          IconButton(
+                            padding: EdgeInsets.only(left: 20.0, right: 20.0),
+                            color: _headerTextColor != null
+                                ? _headerTextColor
+                                : Colors.black.withOpacity(0.5),
+                            alignment: Alignment.centerLeft,
+                            icon: Icon(Icons.arrow_back),
+                            onPressed: () {
+                              timeline.isActive = false;
+                              Navigator.pop(context);
+                              return true;
+                            },
+                          ),
+                          // appbar title
+                          Text(
+                            _eraName,
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                fontFamily: "RobotoMedium",
+                                fontSize: 20.0,
+                                color: _headerTextColor != null
+                                    ? _headerTextColor
+                                    : darkText
+                                        .withOpacity(darkText.opacity * 0.75)),
+                          ),
+                          const Spacer(),
+                          // 收藏按钮
+                          GestureDetector(
+                              child: Container(
+                                height: 60.0,
+                                width: 60.0,
+                                padding: EdgeInsets.all(18.0),
+                                color: Colors.white.withOpacity(0.0),
+                                child: FlareActor("assets/heart_toolbar.flr",
+                                    animation: _showFavorites ? "On" : "Off",
+                                    shouldClip: false,
+                                    color: _headerTextColor != null
+                                        ? _headerTextColor
+                                        : darkText.withOpacity(
+                                            darkText.opacity * 0.75),
+                                    alignment: Alignment.centerRight),
+                              ),
+                              onTap: () {
+                                timeline.showFavorites =
+                                    !timeline.showFavorites;
+                                setState(() {
+                                  _showFavorites = timeline.showFavorites;
+                                });
+                              }),
+                        ]))
+              ],
+            )
+          ],
+        ),
+      ),
     );
   }
 }

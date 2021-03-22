@@ -11,7 +11,7 @@ class MenuSectionData {
   Color textColor;
   Color backgroundColor;
   String assetId;
-  List<MenuItemData> items = List<MenuItemData>();
+  List<MenuItemData> items = [];
 }
 
 /// Data container for all the sub-elements of the [MenuSection].
@@ -19,6 +19,7 @@ class MenuItemData {
   String label;
   double start;
   double end;
+  // 填充
   bool pad = false;
   double padTop = 0.0;
   double padBottom = 0.0;
@@ -86,7 +87,7 @@ class MenuData {
   List<MenuSectionData> sections = [];
 
   Future<bool> loadFromBundle(String filename) async {
-    List<MenuSectionData> menu = List<MenuSectionData>();
+    List<MenuSectionData> menu = [];
     String data = await rootBundle.loadString(filename);
     List jsonEntries = json.decode(data) as List;
     for (dynamic entry in jsonEntries) {
